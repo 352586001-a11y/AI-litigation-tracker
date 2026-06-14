@@ -565,6 +565,226 @@ def seed(conn):
         "UPDATE intelligence_cards SET title = ?, summary = ?, updated_at = ? WHERE id = ?",
         [(title, summary, now, card_id) for card_id, title, summary in intel_cn],
     )
+    seed_extra_european_ai_litigation(conn, now)
+
+
+def seed_extra_european_ai_litigation(conn, now):
+    organizations = [
+        ("org_gema", "GEMA", "Gesellschaft für musikalische Aufführungs- und mechanische Vervielfältigungsrechte", "Germany", "cmo", "P1", 89, "German music collecting society. Track OpenAI and Suno copyright cases in Munich."),
+        ("org_getty", "Getty Images", "Getty Images", "United Kingdom", "publisher", "P1", 83, "Image archive and licensing rights holder. Track UK Stability AI litigation."),
+        ("org_laion", "LAION", "Large-scale Artificial Intelligence Open Network", "Germany", "ai_dataset_org", "P2", 71, "Open dataset organization involved in German TDM exception litigation."),
+        ("org_partec", "ParTec AG", "ParTec AG", "Germany", "technology_company", "P3", 58, "AI/HPC hardware patent plaintiff in Unified Patent Court litigation against Nvidia."),
+    ]
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO organizations
+        (id, name, full_name, jurisdiction, category, priority, risk_score, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [row + (now, now) for row in organizations],
+    )
+
+    cases = [
+        (
+            "case_de_gema_openai",
+            "GEMA v. OpenAI / ChatGPT 歌词版权案",
+            "Germany",
+            "Landgericht München I",
+            "42 O 14139/24",
+            None,
+            "CASE",
+            "已判决 / 损害赔偿与禁令信号",
+            "copyright_infringement,lyrics,training_data,memorization",
+            "OpenAI ChatGPT",
+            89,
+            "P1",
+            "德国集体管理组织 GEMA 在慕尼黑起诉 OpenAI，指控 ChatGPT 未经许可使用和复现受保护歌词。该案是欧洲 AI 版权诉讼高信号案例，需要持续追踪判决全文和上诉动态。",
+        ),
+        (
+            "case_de_gema_suno",
+            "GEMA v. Suno AI 音乐生成版权案",
+            "Germany",
+            "Landgericht München I",
+            None,
+            None,
+            "CASE",
+            "已起诉 / 待审理",
+            "copyright_infringement,music_generation,training_data,lyrics",
+            "Suno",
+            82,
+            "P1",
+            "GEMA 在慕尼黑针对 Suno 提起 AI 音乐版权诉讼，要求厘清训练和生成音乐时使用受保护曲库的授权与报酬问题。",
+        ),
+        (
+            "case_uk_getty_stability",
+            "Getty Images v. Stability AI 英国高等法院案",
+            "United Kingdom",
+            "High Court of England and Wales",
+            None,
+            None,
+            "CASE",
+            "审理中 / 部分主张收窄",
+            "copyright_infringement,trademark,secondary_infringement,image_training",
+            "Stable Diffusion",
+            78,
+            "P1",
+            "Getty Images 在英国高等法院起诉 Stability AI，指控其在 Stable Diffusion 训练和输出中使用 Getty 图像及水印。该案是欧洲图像训练版权和商标风险的核心案件。",
+        ),
+        (
+            "case_de_kneschke_laion",
+            "Robert Kneschke v. LAION TDM 例外案",
+            "Germany",
+            "Landgericht Hamburg",
+            "310 O 227/23",
+            None,
+            "CASE",
+            "一审驳回 / 上诉观察",
+            "copyright_infringement,text_and_data_mining,image_dataset",
+            "LAION dataset",
+            74,
+            "P2",
+            "德国摄影师 Robert Kneschke 围绕 LAION 数据集中的图片使用提起诉讼。汉堡法院一审驳回后，该案成为欧盟 TDM 例外适用于 AI 数据集的重要信号。",
+        ),
+        (
+            "case_de_partec_nvidia_upc",
+            "ParTec v. Nvidia AI 超算专利案",
+            "Germany",
+            "Unified Patent Court Munich local division",
+            None,
+            None,
+            "CASE",
+            "已起诉 / 待审理",
+            "patent_infringement,ai_hardware,hpc",
+            "Nvidia DGX",
+            58,
+            "P3",
+            "德国超算公司 ParTec 在欧洲统一专利法院体系下起诉 Nvidia，涉及 DGX AI 超算相关专利。该案属于相邻 AI 知识产权风险，低于版权类诉讼优先级。",
+        ),
+    ]
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO cases
+        (id, title, jurisdiction, court, case_number, ecli, status, procedural_stage,
+         claim_types, ai_systems, risk_score, priority, summary, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [row + (now, now) for row in cases],
+    )
+
+    links = [
+        ("case_de_gema_openai", "org_gema", "plaintiff_org"),
+        ("case_de_gema_suno", "org_gema", "plaintiff_org"),
+        ("case_uk_getty_stability", "org_getty", "plaintiff"),
+        ("case_de_kneschke_laion", "org_laion", "defendant_dataset_org"),
+        ("case_de_partec_nvidia_upc", "org_partec", "plaintiff"),
+    ]
+    conn.executemany(
+        "INSERT OR IGNORE INTO case_organizations (case_id, organization_id, role) VALUES (?, ?, ?)",
+        links,
+    )
+
+    intel_cards = [
+        (
+            "intel_de_gema_openai_lawfare_2025_11_12",
+            "德国 GEMA v. OpenAI 案进入欧洲诉讼地图",
+            "德国慕尼黑 GEMA v. OpenAI / ChatGPT 歌词版权案被纳入诉讼地图。该案是音乐版权、训练数据和模型输出复现风险的重要欧洲样本。",
+            "https://www.lawfaremedia.org/article/a-german-court-s-gema-v.-openai-ruling-could-reverberate-across-ai-copyright-landscape",
+            "Lawfare",
+            "news",
+            "Germany",
+            "org_gema",
+            "case_de_gema_openai",
+            "P1",
+            "published",
+            "news",
+            "GEMA,OpenAI,ChatGPT,lyrics,Germany,copyright",
+            "media_lead",
+            9,
+            "2025-11-12T00:00:00+00:00",
+        ),
+        (
+            "intel_de_gema_suno_musicbusiness_2025_01_21",
+            "GEMA 起诉 Suno，AI 音乐生成版权风险升温",
+            "GEMA 针对 Suno 的慕尼黑诉讼被纳入监控，重点关注 AI 音乐生成、训练语料授权和创作者报酬。",
+            "https://www.musicbusinessworldwide.com/gema-sues-suno-in-germany-for-copyright-infringement-over-ai-generated-music/",
+            "Music Business Worldwide",
+            "news",
+            "Germany",
+            "org_gema",
+            "case_de_gema_suno",
+            "P1",
+            "published",
+            "news",
+            "GEMA,Suno,AI music,copyright,Germany",
+            "media_lead",
+            8,
+            "2025-01-21T00:00:00+00:00",
+        ),
+        (
+            "intel_uk_getty_stability_reuters_2025_06_25",
+            "Getty v. Stability AI 英国案继续影响图像训练风险",
+            "Getty Images v. Stability AI 被纳入英国诉讼层，作为图像训练、输出水印和商标/版权交叉风险的核心案件。",
+            "https://www.reuters.com/legal/transactional/stability-ai-wins-partial-victory-getty-images-uk-lawsuit-2025-06-25/",
+            "Reuters",
+            "news",
+            "United Kingdom",
+            "org_getty",
+            "case_uk_getty_stability",
+            "P1",
+            "published",
+            "news",
+            "Getty,Stability AI,Stable Diffusion,UK,copyright,trademark",
+            "media_lead",
+            7,
+            "2025-06-25T00:00:00+00:00",
+        ),
+        (
+            "intel_de_kneschke_laion_techno_llama_2024_09_27",
+            "Kneschke v. LAION 成为德国 TDM 例外观察案",
+            "Robert Kneschke v. LAION 被纳入德国诉讼层。该案围绕 AI 数据集和文本与数据挖掘例外，是欧盟 AI 训练合规的重要观察点。",
+            "https://thetechnollama.wordpress.com/2024/09/27/hamburg-regional-court-rules-on-text-and-data-mining-exception-in-laion-case/",
+            "The Technollama",
+            "law_firm_statement",
+            "Germany",
+            "org_laion",
+            "case_de_kneschke_laion",
+            "P2",
+            "published",
+            "law_firm_statement",
+            "LAION,TDM,Germany,AI dataset,copyright",
+            "semi_official",
+            6,
+            "2024-09-27T00:00:00+00:00",
+        ),
+        (
+            "intel_de_partec_nvidia_juve_2024_10_28",
+            "ParTec v. Nvidia 纳入相邻 AI 知识产权诉讼层",
+            "ParTec v. Nvidia 属于 AI/HPC 专利诉讼，不是版权案，但会影响欧洲 AI 基础设施知识产权风险，因此以 P3 纳入相邻风险层。",
+            "https://www.juve-patent.com/cases/partecs-upc-lawsuit-against-nvidia-tests-ai-computing-patents/",
+            "JUVE Patent",
+            "news",
+            "Germany",
+            "org_partec",
+            "case_de_partec_nvidia_upc",
+            "P3",
+            "published",
+            "news",
+            "ParTec,Nvidia,UPC,AI hardware,patent",
+            "media_lead",
+            3,
+            "2024-10-28T00:00:00+00:00",
+        ),
+    ]
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO intelligence_cards
+        (id, title, summary, source_url, source_name, source_type, jurisdiction, organization_id,
+         case_id, priority, status, signal_type, tags, confidence, risk_delta,
+         signal_date, created_at, updated_at, approved_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [row[:-1] + (row[-1], now, now, now if row[10] == "published" else None) for row in intel_cards],
+    )
 
 
 def rows(conn, query, params=()):
