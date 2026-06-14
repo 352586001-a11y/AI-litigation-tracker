@@ -5,97 +5,56 @@ const state = {
   intel: [],
   filter: "all",
   typeFilter: "all",
+  range: "all",
+  layers: {
+    litigation: true,
+    intel: true,
+    official: true,
+    p0: true,
+  },
 };
 
 const signalTypeLabels = {
-  news: "\u65b0\u95fb",
-  law_firm_statement: "\u5f8b\u6240\u8868\u6001",
-  rights_holder_statement: "\u6743\u5229\u4eba\u58f0\u660e",
-  official_court_document: "\u5b98\u65b9\u6587\u4ef6/\u6cd5\u9662\u6587\u4e66",
+  news: "新闻",
+  law_firm_statement: "律所表态",
+  rights_holder_statement: "权利人声明",
+  official_court_document: "官方文件/法院文书",
 };
 
 const jurisdictionLabels = {
-  France: "\u6cd5\u56fd",
-  Germany: "\u5fb7\u56fd",
-  "European Union": "\u6b27\u76df",
-  "United Kingdom": "\u82f1\u56fd",
-  Netherlands: "\u8377\u5170",
-  Spain: "\u897f\u73ed\u7259",
-  Italy: "\u610f\u5927\u5229",
-  Nordics: "\u5317\u6b27",
-  "EU / CJEU": "\u6b27\u76df / \u6b27\u76df\u6cd5\u9662",
+  France: "法国",
+  Germany: "德国",
+  "European Union": "欧盟",
+  "United Kingdom": "英国",
+  Netherlands: "荷兰",
+  Spain: "西班牙",
+  Italy: "意大利",
+  Nordics: "北欧",
+  "EU / CJEU": "欧盟 / 欧盟法院",
 };
 
 const statusLabels = {
-  WATCH: "\u76d1\u63a7\u4e2d",
-  LEAD: "\u7ebf\u7d22",
-  CASE: "\u6848\u4ef6",
-  CLOSED: "\u5df2\u7ed3\u675f",
+  WATCH: "监控中",
+  LEAD: "线索",
+  CASE: "案件",
+  CLOSED: "已结束",
 };
 
 const confidenceLabels = {
-  official: "\u5b98\u65b9",
-  semi_official: "\u534a\u5b98\u65b9",
-  media_lead: "\u5a92\u4f53\u7ebf\u7d22",
+  official: "官方",
+  semi_official: "半官方",
+  media_lead: "媒体线索",
 };
 
 const jurisdictions = [
-  {
-    name: "France",
-    priority: "P0",
-    score: 97,
-    drivers: ["SACD", "Le Figaro", "\u5df4\u9ece\u6cd5\u9662", "Judilibre"],
-    summary: "\u521b\u4f5c\u8005\u7ec4\u7ec7\u548c\u65b0\u95fb\u51fa\u7248\u6743\u5229\u4eba\u53cc P0\uff0c\u5b98\u65b9\u6587\u4e66\u548c\u8206\u60c5\u90fd\u9700\u8981\u65e5\u7ea7\u76d1\u63a7\u3002",
-  },
-  {
-    name: "EU / CJEU",
-    priority: "P1",
-    score: 84,
-    drivers: ["AI Act", "TDM opt-out", "\u6b27\u76df\u6cd5\u9662"],
-    summary: "\u5f71\u54cd\u5168\u6b27\u7684\u89e3\u91ca\u5c42\uff1a\u8bad\u7ec3\u6570\u636e\u900f\u660e\u5ea6\u3001TDM \u4f8b\u5916\u3001opt-out \u5408\u89c4\u3002",
-  },
-  {
-    name: "Germany",
-    priority: "P2",
-    score: 67,
-    drivers: ["\u51fa\u7248\u5546", "\u56fe\u50cf\u6743\u5229", "\u6570\u636e\u5e93\u6743"],
-    summary: "\u5173\u6ce8\u51fa\u7248\u5546\u3001\u56fe\u7247\u6743\u5229\u4eba\u548c\u6570\u636e\u5e93\u6743\u8def\u5f84\u3002",
-  },
-  {
-    name: "United Kingdom",
-    priority: "P2",
-    score: 70,
-    drivers: ["\u65b0\u95fb\u8bed\u6599", "\u56fe\u50cf\u6743\u5229", "\u6388\u6743"],
-    summary: "\u867d\u975e EU\uff0c\u4f46\u4f1a\u5f71\u54cd\u6b27\u6d32\u6388\u6743\u5e02\u573a\u548c\u5e73\u53f0\u7b56\u7565\u3002",
-  },
-  {
-    name: "Netherlands",
-    priority: "P2",
-    score: 61,
-    drivers: ["\u5e73\u53f0\u7ba1\u8f96", "\u6293\u53d6", "\u6258\u7ba1"],
-    summary: "\u8de8\u5883\u5e73\u53f0\u3001\u6293\u53d6\u548c\u7ba1\u8f96\u98ce\u9669\u76d1\u63a7\u3002",
-  },
-  {
-    name: "Spain",
-    priority: "P3",
-    score: 48,
-    drivers: ["\u5a92\u4f53\u96c6\u56e2", "\u6b27\u76df\u843d\u5730"],
-    summary: "\u4ee5\u5a92\u4f53\u6743\u5229\u4eba\u4e0e\u6b27\u76df\u5b9e\u65bd\u52a8\u6001\u4e3a\u4e3b\u3002",
-  },
-  {
-    name: "Italy",
-    priority: "P3",
-    score: 52,
-    drivers: ["\u51fa\u7248\u5546", "\u76d1\u7ba1\u673a\u6784", "\u6587\u5316\u884c\u4e1a"],
-    summary: "\u5173\u6ce8\u51fa\u7248\u3001\u76d1\u7ba1\u58f0\u660e\u548c\u6587\u5316\u5185\u5bb9\u6388\u6743\u3002",
-  },
-  {
-    name: "Nordics",
-    priority: "P3",
-    score: 45,
-    drivers: ["\u96c6\u4f53\u7ba1\u7406\u7ec4\u7ec7", "\u5a92\u4f53\u8054\u76df", "\u653f\u7b56"],
-    summary: "\u7248\u6743\u7ec4\u7ec7\u548c\u5a92\u4f53\u8054\u76df\u4fe1\u53f7\u76d1\u63a7\u3002",
-  },
+  { id: "fr", name: "France", label: "法国", priority: "P0", score: 97, x: 42, y: 58, note: "SACD、Le Figaro、巴黎法院" },
+  { id: "eu", name: "European Union", label: "欧盟", priority: "P1", score: 84, x: 59, y: 43, note: "AI Act、CJEU、TDM opt-out" },
+  { id: "de", name: "Germany", label: "德国", priority: "P1", score: 78, x: 54, y: 42, note: "GEMA、OpenAI、音乐版权" },
+  { id: "uk", name: "United Kingdom", label: "英国", priority: "P2", score: 70, x: 31, y: 38, note: "新闻语料、图像权利、授权" },
+  { id: "nl", name: "Netherlands", label: "荷兰", priority: "P2", score: 61, x: 48, y: 36, note: "平台管辖、抓取、托管" },
+  { id: "es", name: "Spain", label: "西班牙", priority: "P3", score: 48, x: 35, y: 76, note: "媒体集团、欧盟落地" },
+  { id: "it", name: "Italy", label: "意大利", priority: "P3", score: 52, x: 60, y: 72, note: "出版、监管、文化行业" },
+  { id: "no", name: "Nordics", label: "北欧", priority: "P3", score: 45, x: 63, y: 21, note: "集体管理组织、媒体联盟" },
 ];
 
 const $ = (selector) => document.querySelector(selector);
@@ -111,111 +70,111 @@ function priorityBadge(priority) {
 }
 
 function formatDate(value) {
-  if (!value) return "\u65e0\u65e5\u671f";
+  if (!value) return "无日期";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
   return date.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
+function inRange(item) {
+  if (state.range === "all") return true;
+  const raw = item.signal_date || item.approved_at || item.created_at;
+  if (!raw) return true;
+  const time = new Date(raw).getTime();
+  if (Number.isNaN(time)) return true;
+  const days = state.range === "7d" ? 7 : 30;
+  return Date.now() - time <= days * 24 * 60 * 60 * 1000;
+}
+
+function intelForJurisdiction(name) {
+  const normalized = name === "EU / CJEU" ? "European Union" : name;
+  return state.intel.filter((item) => item.jurisdiction === normalized && inRange(item));
+}
+
+function caseForJurisdiction(name) {
+  const normalized = name === "EU / CJEU" ? "European Union" : name;
+  return state.cases.filter((item) => item.jurisdiction === normalized);
+}
+
 function renderMetrics() {
+  if (!$("#metrics")) return;
   const p0 = state.organizations.filter((item) => item.priority === "P0").length;
   const officialDocs = state.documents.filter((item) => item.confidence === "official").length;
-  const avgRisk = Math.round(
-    state.cases.reduce((sum, item) => sum + item.risk_score, 0) / Math.max(state.cases.length, 1)
-  );
+  const p1PlusIntel = state.intel.filter((item) => ["P0", "P1"].includes(item.priority)).length;
   $("#metrics").innerHTML = [
-    ["P0 \u6700\u9ad8\u98ce\u9669", p0],
-    ["\u5df2\u53d1\u5e03\u7b80\u62a5", state.intel.length],
-    ["\u5b98\u65b9\u6587\u4e66", officialDocs],
-    ["\u5e73\u5747\u98ce\u9669", avgRisk],
+    ["P0 对象", p0],
+    ["高风险情报", p1PlusIntel],
+    ["官方文书", officialDocs],
+    ["监控法域", jurisdictions.length],
   ]
-    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
+    .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`)
     .join("");
 }
 
-function countForJurisdiction(collection, name) {
-  if (name === "EU / CJEU") return collection.filter((item) => item.jurisdiction === "European Union").length;
-  return collection.filter((item) => item.jurisdiction === name).length;
-}
-
-function latestForJurisdiction(collection, name) {
-  const normalized = name === "EU / CJEU" ? "European Union" : name;
-  return collection.find((item) => item.jurisdiction === normalized);
-}
-
-function renderMap(container, mode) {
-  if (!container) return;
-  const isIntel = mode === "intel";
-  const source = isIntel ? state.intel : state.cases;
-  container.innerHTML = jurisdictions
-    .map((item, index) => {
-      const count = countForJurisdiction(source, item.name);
-      const latest = isIntel ? latestForJurisdiction(state.intel, item.name) : null;
-      const metric = isIntel ? count : item.score;
+function renderMap() {
+  const points = jurisdictions
+    .map((item) => {
+      const intelCount = intelForJurisdiction(item.name).length;
+      const caseCount = caseForJurisdiction(item.name).length;
+      const showPoint =
+        (state.layers.litigation && caseCount > 0) ||
+        (state.layers.intel && intelCount > 0) ||
+        (state.layers.p0 && item.priority === "P0");
+      if (!showPoint) return "";
+      const intensity = Math.min(100, item.score + intelCount * 5);
       return `
-        <article class="map-tile ${item.priority}" style="--x:${18 + (index % 4) * 25}%; --y:${22 + Math.floor(index / 4) * 42}%">
-          <div class="risk-cell-head">
-            <h3>${jurisdictionLabels[item.name] || item.name}</h3>
-            ${priorityBadge(item.priority)}
-          </div>
-          <div class="score-row">
-            <strong>${metric}</strong>
-            <div class="risk-bar"><span style="width:${isIntel ? Math.min(count * 30, 100) : item.score}%"></span></div>
-          </div>
-          <p>${isIntel ? `${count} \u6761\u5df2\u53d1\u5e03\u60c5\u62a5${latest ? `\uff0c\u6700\u65b0 ${formatDate(latest.signal_date || latest.approved_at || latest.created_at)}` : ""}` : item.summary}</p>
-          <div class="driver-list">
-            ${(isIntel ? ["\u65b0\u95fb", "\u5f8b\u6240", "\u6743\u5229\u4eba", "\u5b98\u65b9\u6587\u4ef6"] : item.drivers).map((driver) => `<span>${driver}</span>`).join("")}
-          </div>
-        </article>
+        <button class="map-point ${item.priority}" style="left:${item.x}%; top:${item.y}%;" data-jurisdiction="${item.name}">
+          <span>${item.label}</span>
+          <strong>${item.priority}</strong>
+          <em>${caseCount} 案件 · ${intelCount} 情报</em>
+          <i style="width:${intensity}%"></i>
+        </button>
       `;
     })
     .join("");
-}
 
-function renderP0Targets() {
-  const p0 = state.organizations.filter((org) => org.priority === "P0");
-  $("#p0Targets").innerHTML = p0
-    .map(
-      (org) => `
-        <article class="target-card">
-          <div>
-            <h3>${org.name}</h3>
-            <p>${org.notes}</p>
-          </div>
-          <strong>${org.risk_score}</strong>
-        </article>
-      `
-    )
-    .join("");
+  const officialPins = state.layers.official
+    ? `
+      <div class="map-pin official" style="left:58%; top:47%;">EUR-Lex</div>
+      <div class="map-pin official" style="left:42%; top:63%;">Judilibre</div>
+    `
+    : "";
+
+  $("#nordicMap").innerHTML = `
+    <div class="map-watermark">EUROPE</div>
+    <div class="map-shape"></div>
+    <div class="map-grid-lines"></div>
+    ${officialPins}
+    ${points}
+  `;
 }
 
 function renderIntel() {
+  if (!$("#intelCards")) return;
   const cards = state.intel.filter((item) => {
     const priorityMatch = state.filter === "all" || item.priority === state.filter;
     const typeMatch = state.typeFilter === "all" || item.signal_type === state.typeFilter;
-    return priorityMatch && typeMatch;
+    return priorityMatch && typeMatch && inRange(item);
   });
   $("#intelCards").innerHTML = cards.length
     ? cards
         .map(
           (item) => `
-        <article class="intel-card">
+        <article class="intel-feed-card">
           <div class="case-meta">
             ${priorityBadge(item.priority)}
             <span class="pill type-pill">${signalTypeLabels[item.signal_type] || item.signal_type}</span>
             <span class="pill">${confidenceLabels[item.confidence] || item.confidence}</span>
-            <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
-            <span class="pill">+${item.risk_delta}</span>
           </div>
           <h3>${item.title}</h3>
           <p>${item.summary}</p>
           <div class="meta-list">
-            <span>情报日期：${formatDate(item.signal_date || item.approved_at || item.created_at)}</span>
-            <span>来源类型：${signalTypeLabels[item.signal_type] || item.signal_type}</span>
+            <span>日期：${formatDate(item.signal_date || item.approved_at || item.created_at)}</span>
+            <span>法域：${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
           </div>
           <div class="intel-foot">
-            <span>${formatDate(item.signal_date || item.approved_at || item.created_at)} · ${item.organization_name || item.source_name}</span>
-            <a href="${item.source_url}" target="_blank" rel="noreferrer">\u6765\u6e90</a>
+            <span>${item.source_name}</span>
+            <a href="${item.source_url}" target="_blank" rel="noreferrer">来源</a>
           </div>
         </article>
       `
@@ -225,6 +184,7 @@ function renderIntel() {
 }
 
 function renderCases() {
+  if (!$("#cases")) return;
   $("#cases").innerHTML = state.cases
     .map(
       (item) => `
@@ -233,7 +193,7 @@ function renderCases() {
             ${priorityBadge(item.priority)}
             <span class="pill">${statusLabels[item.status] || item.status}</span>
             <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
-            <span class="pill">${item.document_count} docs</span>
+            <span class="pill">${item.document_count} 文书</span>
           </div>
           <h3>${item.title}</h3>
           <p>${item.summary}</p>
@@ -253,30 +213,31 @@ async function showCase(caseId) {
   $("#caseDetail").innerHTML = `
     <div class="case-meta">
       ${priorityBadge(item.priority)}
-      <span class="pill">${item.status}</span>
+      <span class="pill">${statusLabels[item.status] || item.status}</span>
       <span class="pill">${item.procedural_stage}</span>
-      <span class="pill">Risk ${item.risk_score}</span>
+      <span class="pill">风险 ${item.risk_score}</span>
     </div>
     <h2>${item.title}</h2>
     <p>${item.summary}</p>
     <div class="detail-block">
-      <h3>\u6cd5\u9662\u4e0e\u6807\u8bc6</h3>
-      <p>${item.court || "\u5f85\u786e\u8ba4"} · ${item.case_number || "\u65e0\u6848\u53f7"} · ${item.ecli || "\u65e0 ECLI"}</p>
+      <h3>法院与标识</h3>
+      <p>${item.court || "待确认"} · ${item.case_number || "无案号"} · ${item.ecli || "无 ECLI"}</p>
     </div>
     <div class="detail-block">
-      <h3>\u6743\u5229\u4e3b\u4f53</h3>
-      <p>${item.organizations.map((org) => `${org.name} (${org.role})`).join(", ") || "\u672a\u7ed1\u5b9a"}</p>
+      <h3>权利主体</h3>
+      <p>${item.organizations.map((org) => `${org.name} (${org.role})`).join(", ") || "未绑定"}</p>
     </div>
     <div class="detail-block">
-      <h3>\u5b98\u65b9\u6587\u4e66</h3>
-      <p>${item.documents.length ? item.documents.map((doc) => doc.title).join(", ") : "\u6682\u65e0\u6848\u4ef6\u6587\u4e66\uff0c\u4fdd\u6301\u76d1\u63a7\u3002"}</p>
+      <h3>官方文书</h3>
+      <p>${item.documents.length ? item.documents.map((doc) => doc.title).join(", ") : "暂无案件文书，保持监控。"}</p>
     </div>
   `;
   $("#caseDialog").showModal();
 }
 
 function attachEvents() {
-  $(".filters").addEventListener("click", (event) => {
+  const priorityFilters = $(".filters");
+  if (priorityFilters) priorityFilters.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-filter]");
     if (!button) return;
     state.filter = button.dataset.filter;
@@ -285,7 +246,8 @@ function attachEvents() {
     renderIntel();
   });
 
-  $(".type-filters").addEventListener("click", (event) => {
+  const typeFilters = $(".type-filters");
+  if (typeFilters) typeFilters.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-type-filter]");
     if (!button) return;
     state.typeFilter = button.dataset.typeFilter;
@@ -294,15 +256,34 @@ function attachEvents() {
     renderIntel();
   });
 
-  $("#closeDialog").addEventListener("click", () => $("#caseDialog").close());
+  document.querySelectorAll("[data-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.range = button.dataset.range;
+      document.querySelectorAll("[data-range]").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      renderMap();
+      renderIntel();
+    });
+  });
 
-  $("#runMonitor").addEventListener("click", async () => {
-    $("#runMonitor").disabled = true;
-    $("#runMonitor").textContent = "\u76d1\u63a7\u4e2d";
+  document.querySelectorAll("[data-layer]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      state.layers[checkbox.dataset.layer] = checkbox.checked;
+      renderMap();
+    });
+  });
+
+  const closeDialog = $("#closeDialog");
+  if (closeDialog) closeDialog.addEventListener("click", () => $("#caseDialog").close());
+
+  const runMonitor = $("#runMonitor");
+  if (runMonitor) runMonitor.addEventListener("click", async () => {
+    runMonitor.disabled = true;
+    runMonitor.textContent = "监控中";
     await api("/api/monitor/run", { method: "POST" });
     await load();
-    $("#runMonitor").disabled = false;
-    $("#runMonitor").textContent = "\u8fd0\u884c\u76d1\u63a7";
+    runMonitor.disabled = false;
+    runMonitor.textContent = "运行监控";
   });
 }
 
@@ -318,14 +299,12 @@ async function load() {
   state.documents = documents;
   state.intel = intel;
   renderMetrics();
-  renderMap($("#litigationMap"), "litigation");
-  renderMap($("#intelMap"), "intel");
-  renderP0Targets();
+  renderMap();
   renderIntel();
   renderCases();
 }
 
 attachEvents();
 load().catch((error) => {
-  document.body.innerHTML = `<main><h1>\u52a0\u8f7d\u5931\u8d25</h1><pre>${error.message}</pre></main>`;
+  document.body.innerHTML = `<main><h1>加载失败</h1><pre>${error.message}</pre></main>`;
 });
