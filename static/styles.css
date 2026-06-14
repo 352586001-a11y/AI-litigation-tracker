@@ -502,6 +502,60 @@ main {
   box-shadow: var(--shadow);
 }
 
+.official-panel {
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.source-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.source-card.configured {
+  border-color: rgba(54, 118, 90, 0.36);
+}
+
+.source-card.pending {
+  border-color: rgba(168, 76, 89, 0.28);
+}
+
+.source-card h3 {
+  margin: 10px 0 8px;
+}
+
+.source-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.run-result {
+  margin-top: 14px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f1720;
+  color: #d8e7f0;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
 .panel {
   position: sticky;
   top: 16px;
@@ -1386,6 +1440,7 @@ dialog::backdrop {
   .command-grid,
   .map-duo,
   .admin-grid,
+  .source-grid,
   .risk-matrix,
   .jurisdiction-strip,
   .case-grid,

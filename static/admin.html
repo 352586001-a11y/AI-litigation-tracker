@@ -9,8 +9,8 @@
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">情报审核与发布</p>
-        <h1>情报审核后台</h1>
+        <p class="eyebrow">情报审核与官方文书</p>
+        <h1>监控后台</h1>
       </div>
       <nav class="top-actions">
         <a class="nav-link" href="/">前端大图</a>
@@ -19,6 +19,18 @@
     </header>
 
     <main>
+      <section class="official-panel">
+        <div class="section-head">
+          <div>
+            <h2>官方文书源</h2>
+            <p>Judilibre 配好 PISTE token 后，可自动抓取法国官方裁判文书并生成待审核卡片。</p>
+          </div>
+          <button id="runOfficialDocs" class="primary">运行官方文书抓取</button>
+        </div>
+        <div id="officialSources" class="source-grid"></div>
+        <pre id="officialRunResult" class="run-result" hidden></pre>
+      </section>
+
       <section class="admin-grid">
         <form id="intelForm" class="admin-form">
           <h2>新增情报卡片</h2>
@@ -103,7 +115,7 @@
           <div class="section-head">
             <div>
               <h2>审核队列</h2>
-              <p>发布后会同步到前端“已发布情报简报”。</p>
+              <p>发布后会同步到前端最新情报流。</p>
             </div>
           </div>
           <div class="admin-toolbar">

@@ -8,13 +8,58 @@ import time
 from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "data" / "tracker.db"
 STATIC_DIR = BASE_DIR / "static"
+CONFIG_DIR = BASE_DIR / "config"
+OFFICIAL_CONFIG_PATH = CONFIG_DIR / "official-sources.local.json"
+
+OFFICIAL_SOURCE_CONFIGS = {
+    "source_judilibre": {
+        "label": "Judilibre",
+        "jurisdiction": "France",
+        "kind": "official_api",
+        "credential_key": "JUDILIBRE_BEARER_TOKEN",
+        "config_key": "judilibre",
+        "default_search_url": "https://api.piste.gouv.fr/cassation/judilibre/v1.0/search",
+        "registration_url": "https://www.data.gouv.fr/dataservices/api-judilibre",
+        "notes": "法国司法裁判开放数据。需要 PISTE/API token 后才能自动查询。",
+    },
+    "source_legifrance": {
+        "label": "Légifrance",
+        "jurisdiction": "France",
+        "kind": "official_api",
+        "credential_key": "LEGIFRANCE_BEARER_TOKEN",
+        "config_key": "legifrance",
+        "default_search_url": "",
+        "registration_url": "https://developer.aife.economie.gouv.fr",
+        "notes": "法国官方法律信息 API。当前列为待接入，需要注册后确认 endpoint 权限。",
+    },
+    "source_eurlex": {
+        "label": "EUR-Lex",
+        "jurisdiction": "European Union",
+        "kind": "official_database",
+        "credential_key": "",
+        "config_key": "eurlex",
+        "default_search_url": "https://eur-lex.europa.eu/",
+        "registration_url": "https://eur-lex.europa.eu/",
+        "notes": "欧盟官方法律数据库。公开页面可归档；Web Service/SPARQL 可后续增强。",
+    },
+    "source_curia": {
+        "label": "CURIA / CJEU",
+        "jurisdiction": "European Union",
+        "kind": "official_portal",
+        "credential_key": "",
+        "config_key": "curia",
+        "default_search_url": "https://curia.europa.eu/",
+        "registration_url": "https://curia.europa.eu/",
+        "notes": "欧盟法院官方门户。当前列为官方入口归档源，后续接新闻稿/RSS/检索。",
+    },
+}
 
 
 def utc_now():
@@ -51,6 +96,115 @@ def safe_print(message):
 def stable_hash(*parts):
     raw = "|".join(str(part or "") for part in parts)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def load_official_config():
+    config = {}
+    if OFFICIAL_CONFIG_PATH.exists():
+        try:
+            config = json.loads(OFFICIAL_CONFIG_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            config = {}
+    return config
+
+
+def official_config_for(source_id):
+    source_config = OFFICIAL_SOURCE_CONFIGS[source_id]
+    local_config = load_official_config().get(source_config["config_key"], {})
+    token = os.environ.get(source_config["credential_key"], "") if source_config["credential_key"] else ""
+    token = local_config.get("bearer_token") or token
+    return {
+        **source_config,
+        "enabled": bool(local_config.get("enabled", True)),
+        "search_url": local_config.get("search_url") or source_config["default_search_url"],
+        "bearer_token": token,
+        "extra_headers": local_config.get("headers", {}),
+        "query_limit": int(local_config.get("query_limit", 5)),
+    }
+
+
+def official_source_status(conn):
+    source_rows = {item["id"]: item for item in rows(conn, "SELECT * FROM sources")}
+    status_rows = []
+    for source_id, source_config in OFFICIAL_SOURCE_CONFIGS.items():
+        runtime = official_config_for(source_id)
+        source = source_rows.get(source_id, {})
+        needs_token = bool(runtime["credential_key"])
+        configured = bool(runtime["search_url"]) and (not needs_token or bool(runtime["bearer_token"]))
+        status_rows.append(
+            {
+                "id": source_id,
+                "name": source.get("name") or runtime["label"],
+                "jurisdiction": runtime["jurisdiction"],
+                "kind": runtime["kind"],
+                "configured": configured,
+                "needs_token": needs_token,
+                "enabled": runtime["enabled"],
+                "search_url": runtime["search_url"],
+                "registration_url": runtime["registration_url"],
+                "last_checked_at": source.get("last_checked_at"),
+                "notes": source.get("notes") or runtime["notes"],
+            }
+        )
+    return status_rows
+
+
+def request_json(url, token="", headers=None, payload=None):
+    request_headers = {
+        "Accept": "application/json",
+        "User-Agent": "AI-Copyright-Risk-Tracker/0.1",
+    }
+    if token:
+        request_headers["Authorization"] = f"Bearer {token}"
+    if headers:
+        request_headers.update(headers)
+    data = None
+    method = "GET"
+    if payload is not None:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        request_headers["Content-Type"] = "application/json"
+        method = "POST"
+    req = Request(url, data=data, headers=request_headers, method=method)
+    with urlopen(req, timeout=30) as response:
+        return json.loads(response.read().decode("utf-8", errors="replace"))
+
+
+def extract_judilibre_items(payload):
+    if isinstance(payload, list):
+        return payload
+    for key in ("results", "decisions", "items", "data"):
+        value = payload.get(key) if isinstance(payload, dict) else None
+        if isinstance(value, list):
+            return value
+    if isinstance(payload, dict) and isinstance(payload.get("response"), dict):
+        return extract_judilibre_items(payload["response"])
+    return []
+
+
+def normalize_judilibre_item(item, query):
+    decision_id = item.get("id") or item.get("decision_id") or item.get("numero") or stable_hash(query, item)
+    title = item.get("title") or item.get("titre") or item.get("formation") or f"Judilibre 命中文书 {decision_id}"
+    text = item.get("text") or item.get("texte") or item.get("summary") or item.get("sommaire") or ""
+    date = item.get("date") or item.get("decision_date") or item.get("date_decision")
+    ecli = item.get("ecli") or item.get("ECLI")
+    case_number = item.get("number") or item.get("numero") or item.get("pourvoi") or item.get("case_number")
+    source_url = item.get("url") or item.get("source_url") or f"https://www.courdecassation.fr/decision/{decision_id}"
+    summary = text[:700] if text else f"Judilibre 官方 API 对关键词“{query}”返回命中，需人工审核是否与 AI 版权诉讼相关。"
+    return {
+        "id": f"doc_judilibre_{stable_hash(decision_id, query)[:16]}",
+        "title": title,
+        "source_url": source_url,
+        "document_type": "court_decision",
+        "jurisdiction": "France",
+        "confidence": "official",
+        "document_date": date,
+        "sha256": stable_hash("judilibre", decision_id, title, text),
+        "ecli": ecli,
+        "case_number": case_number,
+        "extracted_text": text,
+        "summary_cn": summary,
+        "raw_payload": item,
+    }
 
 
 def seed(conn):
@@ -450,6 +604,150 @@ def run_monitor():
     return {"run_id": run_id, "checked_sources": len(source_rows), "status": "completed"}
 
 
+def upsert_official_document(conn, source_id, document):
+    now = utc_now()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO documents
+        (id, case_id, source_id, title, source_url, document_type, jurisdiction, confidence,
+         document_date, captured_at, sha256, ecli, case_number, extracted_text, summary_cn, raw_path, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            document["id"],
+            None,
+            source_id,
+            document["title"],
+            document["source_url"],
+            document["document_type"],
+            document["jurisdiction"],
+            document["confidence"],
+            document.get("document_date"),
+            now,
+            document["sha256"],
+            document.get("ecli"),
+            document.get("case_number"),
+            document.get("extracted_text", ""),
+            document.get("summary_cn", ""),
+            None,
+            now,
+        ),
+    )
+    return conn.total_changes
+
+
+def create_review_card_for_document(conn, source_id, document, query):
+    card_id = f"intel_official_{stable_hash(source_id, document['id'], query)[:16]}"
+    now = utc_now()
+    title = f"官方文书命中：{document['title']}"
+    summary = document.get("summary_cn") or f"官方文书源对关键词“{query}”返回命中，等待人工审核。"
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO intelligence_cards
+        (id, title, summary, source_url, source_name, source_type, jurisdiction, organization_id,
+         case_id, priority, status, signal_type, tags, confidence, risk_delta,
+         signal_date, created_at, updated_at, approved_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            card_id,
+            title,
+            summary,
+            document["source_url"],
+            "Judilibre",
+            "official_legal_database",
+            document["jurisdiction"],
+            None,
+            None,
+            "P1",
+            "review",
+            "official_court_document",
+            f"official,Judilibre,{query}",
+            "official",
+            8,
+            document.get("document_date"),
+            now,
+            now,
+            None,
+        ),
+    )
+
+
+def run_judilibre_connector(conn):
+    config = official_config_for("source_judilibre")
+    if not config["enabled"]:
+        return {"source_id": "source_judilibre", "status": "skipped", "reason": "disabled"}
+    if not config["bearer_token"]:
+        return {"source_id": "source_judilibre", "status": "needs_credentials", "reason": "missing bearer token"}
+    if not config["search_url"]:
+        return {"source_id": "source_judilibre", "status": "needs_config", "reason": "missing search_url"}
+
+    keywords = rows(
+        conn,
+        """
+        SELECT mk.query, o.priority
+        FROM monitor_keywords mk
+        LEFT JOIN organizations o ON o.id = mk.organization_id
+        WHERE o.jurisdiction = 'France'
+        ORDER BY o.priority, mk.query
+        """,
+    )
+    inserted_docs = 0
+    inserted_cards = 0
+    errors = []
+    for keyword in keywords:
+        query = keyword["query"]
+        payload = {"query": query, "page_size": config["query_limit"]}
+        url = config["search_url"]
+        try:
+            try:
+                response = request_json(url, config["bearer_token"], config["extra_headers"], payload=payload)
+            except Exception:
+                query_url = f"{url}?{urlencode({'query': query, 'page_size': config['query_limit']})}"
+                response = request_json(query_url, config["bearer_token"], config["extra_headers"])
+            for item in extract_judilibre_items(response)[: config["query_limit"]]:
+                document = normalize_judilibre_item(item, query)
+                before = conn.total_changes
+                upsert_official_document(conn, "source_judilibre", document)
+                if conn.total_changes > before:
+                    inserted_docs += 1
+                    create_review_card_for_document(conn, "source_judilibre", document, query)
+                    inserted_cards += 1
+        except Exception as exc:
+            errors.append({"query": query, "error": str(exc)[:300]})
+
+    return {
+        "source_id": "source_judilibre",
+        "status": "completed" if not errors else "partial",
+        "queries": len(keywords),
+        "inserted_documents": inserted_docs,
+        "created_review_cards": inserted_cards,
+        "errors": errors,
+    }
+
+
+def run_official_documents():
+    now = utc_now()
+    run_id = "official_" + now.replace(":", "").replace("+", "Z")
+    with connect() as conn:
+        results = [run_judilibre_connector(conn)]
+        for source_id in OFFICIAL_SOURCE_CONFIGS:
+            conn.execute(
+                "UPDATE sources SET last_checked_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, source_id),
+            )
+        status = "completed"
+        if any(item["status"] in {"partial", "needs_credentials", "needs_config"} for item in results):
+            status = "partial"
+        notes = json.dumps(results, ensure_ascii=False)
+        conn.execute(
+            "INSERT INTO monitor_runs (id, status, started_at, completed_at, notes) VALUES (?, ?, ?, ?, ?)",
+            (run_id, status, now, utc_now(), notes),
+        )
+        conn.commit()
+    return {"run_id": run_id, "status": status, "results": results}
+
+
 def read_json_body(handler):
     length = int(handler.headers.get("Content-Length", "0") or "0")
     if not length:
@@ -628,6 +926,8 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json(rows(conn, "SELECT * FROM sources ORDER BY jurisdiction, name"))
                 if parsed.path == "/api/documents":
                     return self.send_json(rows(conn, "SELECT * FROM documents ORDER BY captured_at DESC, created_at DESC"))
+                if parsed.path == "/api/admin/official-sources":
+                    return self.send_json(official_source_status(conn))
                 if parsed.path == "/api/intel":
                     params = parse_qs(parsed.query)
                     status = params.get("status", ["published"])[0]
@@ -714,6 +1014,11 @@ class Handler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/monitor/run":
             try:
                 return self.send_json(run_monitor())
+            except Exception as exc:
+                return self.send_json({"error": str(exc)}, 500)
+        if parsed.path == "/api/official-documents/run":
+            try:
+                return self.send_json(run_official_documents())
             except Exception as exc:
                 return self.send_json({"error": str(exc)}, 500)
         if parsed.path == "/api/documents/capture":

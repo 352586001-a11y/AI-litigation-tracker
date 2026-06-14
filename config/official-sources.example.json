@@ -1,0 +1,26 @@
+{
+  "judilibre": {
+    "enabled": true,
+    "search_url": "https://api.piste.gouv.fr/cassation/judilibre/v1.0/search",
+    "bearer_token": "PASTE_PISTE_BEARER_TOKEN_HERE",
+    "query_limit": 5,
+    "headers": {}
+  },
+  "legifrance": {
+    "enabled": false,
+    "search_url": "",
+    "bearer_token": "PASTE_LEGIFRANCE_BEARER_TOKEN_HERE",
+    "query_limit": 5,
+    "headers": {}
+  },
+  "eurlex": {
+    "enabled": true,
+    "search_url": "https://eur-lex.europa.eu/",
+    "query_limit": 5
+  },
+  "curia": {
+    "enabled": true,
+    "search_url": "https://curia.europa.eu/",
+    "query_limit": 5
+  }
+}

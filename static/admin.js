@@ -1,44 +1,46 @@
 const adminState = {
   cards: [],
+  officialSources: [],
   statusFilter: "all",
   priorityFilter: "all",
   typeFilter: "all",
 };
 
 const signalTypeLabels = {
-  news: "\u65b0\u95fb",
-  law_firm_statement: "\u5f8b\u6240\u8868\u6001",
-  rights_holder_statement: "\u6743\u5229\u4eba\u58f0\u660e",
-  official_court_document: "\u5b98\u65b9\u6587\u4ef6/\u6cd5\u9662\u6587\u4e66",
+  news: "新闻",
+  law_firm_statement: "律所表态",
+  rights_holder_statement: "权利人声明",
+  official_court_document: "官方文件/法院文书",
 };
 
 const statusLabels = {
-  review: "\u5f85\u5ba1\u6838",
-  published: "\u5df2\u53d1\u5e03",
-  rejected: "\u5df2\u62d2\u7edd",
+  review: "待审核",
+  published: "已发布",
+  rejected: "已拒绝",
 };
 
 const confidenceLabels = {
-  official: "\u5b98\u65b9",
-  semi_official: "\u534a\u5b98\u65b9",
-  media_lead: "\u5a92\u4f53\u7ebf\u7d22",
+  official: "官方",
+  semi_official: "半官方",
+  media_lead: "媒体线索",
 };
 
 const jurisdictionLabels = {
-  France: "\u6cd5\u56fd",
-  Germany: "\u5fb7\u56fd",
-  "European Union": "\u6b27\u76df",
-  "United Kingdom": "\u82f1\u56fd",
-  Netherlands: "\u8377\u5170",
+  France: "法国",
+  Germany: "德国",
+  "European Union": "欧盟",
+  "United Kingdom": "英国",
+  Netherlands: "荷兰",
+  "Council of Europe": "欧洲委员会",
 };
 
 const sourceTypeLabels = {
-  news: "\u65b0\u95fb\u5a92\u4f53",
-  official_site: "\u5b98\u65b9\u7f51\u7ad9",
-  publisher_site: "\u51fa\u7248\u65b9\u7f51\u7ad9",
-  official_legal_database: "\u5b98\u65b9\u6cd5\u5f8b\u6570\u636e\u5e93",
-  official_portal: "\u5b98\u65b9\u95e8\u6237",
-  manual: "\u624b\u5de5\u5f55\u5165",
+  news: "新闻媒体",
+  official_site: "官方网站",
+  publisher_site: "出版方网站",
+  official_legal_database: "官方法律数据库",
+  official_portal: "官方门户",
+  manual: "手工录入",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -54,10 +56,36 @@ function priorityBadge(priority) {
 }
 
 function formatDate(value) {
-  if (!value) return "\u65e0\u65e5\u671f";
+  if (!value) return "无日期";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
   return date.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+function renderOfficialSources() {
+  $("#officialSources").innerHTML = adminState.officialSources
+    .map((item) => {
+      const status = item.configured ? "已配置" : item.needs_token ? "待配置 token" : "已登记";
+      return `
+        <article class="source-card ${item.configured ? "configured" : "pending"}">
+          <div class="case-meta">
+            <span class="pill">${status}</span>
+            <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
+            <span class="pill">${item.kind}</span>
+          </div>
+          <h3>${item.name}</h3>
+          <p>${item.notes}</p>
+          <div class="meta-list">
+            <span>最近检查：${formatDate(item.last_checked_at)}</span>
+            <span>接口：${item.search_url || "注册后填写"}</span>
+          </div>
+          <div class="intel-foot">
+            <a href="${item.registration_url}" target="_blank" rel="noreferrer">注册/文档</a>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 function filteredCards() {
@@ -106,12 +134,34 @@ function renderCards() {
 }
 
 async function load() {
-  adminState.cards = await api("/api/admin/intel");
+  const [cards, officialSources] = await Promise.all([
+    api("/api/admin/intel"),
+    api("/api/admin/official-sources"),
+  ]);
+  adminState.cards = cards;
+  adminState.officialSources = officialSources;
+  renderOfficialSources();
   renderCards();
 }
 
 function attachEvents() {
   $("#refreshAdmin").addEventListener("click", load);
+
+  $("#runOfficialDocs").addEventListener("click", async () => {
+    const button = $("#runOfficialDocs");
+    const resultBox = $("#officialRunResult");
+    button.disabled = true;
+    button.textContent = "抓取中";
+    try {
+      const result = await api("/api/official-documents/run", { method: "POST" });
+      resultBox.hidden = false;
+      resultBox.textContent = JSON.stringify(result, null, 2);
+      await load();
+    } finally {
+      button.disabled = false;
+      button.textContent = "运行官方文书抓取";
+    }
+  });
 
   ["statusFilter", "priorityFilter", "typeFilter"].forEach((id) => {
     $(`#${id}`).addEventListener("change", (event) => {
@@ -153,5 +203,5 @@ function attachEvents() {
 
 attachEvents();
 load().catch((error) => {
-  document.body.innerHTML = `<main><h1>\u52a0\u8f7d\u5931\u8d25</h1><pre>${error.message}</pre></main>`;
+  document.body.innerHTML = `<main><h1>加载失败</h1><pre>${error.message}</pre></main>`;
 });
