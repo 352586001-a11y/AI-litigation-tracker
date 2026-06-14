@@ -1,4 +1,5 @@
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -10,6 +11,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -113,11 +115,18 @@ def official_config_for(source_id):
     local_config = load_official_config().get(source_config["config_key"], {})
     token = os.environ.get(source_config["credential_key"], "") if source_config["credential_key"] else ""
     token = local_config.get("bearer_token") or token
+    client_id = local_config.get("client_id") or os.environ.get(f"{source_config['config_key'].upper()}_CLIENT_ID", "")
+    client_secret = local_config.get("client_secret") or os.environ.get(f"{source_config['config_key'].upper()}_CLIENT_SECRET", "")
     return {
         **source_config,
         "enabled": bool(local_config.get("enabled", True)),
         "search_url": local_config.get("search_url") or source_config["default_search_url"],
+        "token_url": local_config.get("token_url", ""),
         "bearer_token": token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "scope": local_config.get("scope", "openid"),
+        "auth_style": local_config.get("auth_style", "body"),
         "extra_headers": local_config.get("headers", {}),
         "query_limit": int(local_config.get("query_limit", 5)),
     }
@@ -130,7 +139,9 @@ def official_source_status(conn):
         runtime = official_config_for(source_id)
         source = source_rows.get(source_id, {})
         needs_token = bool(runtime["credential_key"])
-        configured = bool(runtime["search_url"]) and (not needs_token or bool(runtime["bearer_token"]))
+        has_direct_token = bool(runtime["bearer_token"])
+        has_oauth_credentials = bool(runtime["client_id"] and runtime["client_secret"] and runtime["token_url"])
+        configured = bool(runtime["search_url"]) and (not needs_token or has_direct_token or has_oauth_credentials)
         status_rows.append(
             {
                 "id": source_id,
@@ -167,6 +178,44 @@ def request_json(url, token="", headers=None, payload=None):
     req = Request(url, data=data, headers=request_headers, method=method)
     with urlopen(req, timeout=30) as response:
         return json.loads(response.read().decode("utf-8", errors="replace"))
+
+
+def fetch_oauth_application_token(config):
+    if config.get("bearer_token"):
+        return config["bearer_token"]
+    if not config.get("client_id") or not config.get("client_secret") or not config.get("token_url"):
+        return ""
+
+    form = {
+        "grant_type": "client_credentials",
+    }
+    if config.get("scope"):
+        form["scope"] = config["scope"]
+
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "AI-Copyright-Risk-Tracker/0.1",
+    }
+    if config.get("auth_style") == "basic":
+        raw = f"{config['client_id']}:{config['client_secret']}".encode("utf-8")
+        headers["Authorization"] = "Basic " + base64.b64encode(raw).decode("ascii")
+    else:
+        form["client_id"] = config["client_id"]
+        form["client_secret"] = config["client_secret"]
+
+    req = Request(config["token_url"], data=urlencode(form).encode("utf-8"), headers=headers, method="POST")
+    try:
+        with urlopen(req, timeout=30) as response:
+            payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    except HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")[:300]
+        raise RuntimeError(f"OAuth token request failed: HTTP {exc.code} {details}") from exc
+
+    token = payload.get("access_token") or payload.get("token")
+    if not token:
+        raise RuntimeError("OAuth token response did not include access_token")
+    return token
 
 
 def extract_judilibre_items(payload):
@@ -897,8 +946,9 @@ def run_judilibre_connector(conn):
     config = official_config_for("source_judilibre")
     if not config["enabled"]:
         return {"source_id": "source_judilibre", "status": "skipped", "reason": "disabled"}
-    if not config["bearer_token"]:
-        return {"source_id": "source_judilibre", "status": "needs_credentials", "reason": "missing bearer token"}
+    token = fetch_oauth_application_token(config)
+    if not token:
+        return {"source_id": "source_judilibre", "status": "needs_credentials", "reason": "missing bearer token or OAuth client credentials"}
     if not config["search_url"]:
         return {"source_id": "source_judilibre", "status": "needs_config", "reason": "missing search_url"}
 
@@ -921,10 +971,10 @@ def run_judilibre_connector(conn):
         url = config["search_url"]
         try:
             try:
-                response = request_json(url, config["bearer_token"], config["extra_headers"], payload=payload)
+                response = request_json(url, token, config["extra_headers"], payload=payload)
             except Exception:
                 query_url = f"{url}?{urlencode({'query': query, 'page_size': config['query_limit']})}"
-                response = request_json(query_url, config["bearer_token"], config["extra_headers"])
+                response = request_json(query_url, token, config["extra_headers"])
             for item in extract_judilibre_items(response)[: config["query_limit"]]:
                 document = normalize_judilibre_item(item, query)
                 before = conn.total_changes

@@ -17,13 +17,19 @@
 
 1. 复制 `config/official-sources.example.json` 为 `config/official-sources.local.json`。
 2. 将 `judilibre.bearer_token` 改成 PISTE/Judilibre 授权 token。
-3. 如注册后台给出的 endpoint 与默认值不同，修改 `judilibre.search_url`。
-4. 在后台点击“运行官方文书抓取”，或请求 `POST /api/official-documents/run`。
+3. 如果 PISTE 给的是 application OAuth 凭证，而不是现成 bearer token，填写 `token_url`、`client_id`、`client_secret`、`scope`。不要把这些值提交到 Git。
+4. 如注册后台给出的 endpoint 与默认值不同，修改 `judilibre.search_url`。
+5. 在后台点击“运行官方文书抓取”，或请求 `POST /api/official-documents/run`。
 
 命中结果：
 
 - 写入 `documents`，标记为 `confidence=official`。
 - 自动生成一张 `status=review` 的官方文书情报卡片，等待后台审核后发布到前端。
+
+认证方式：
+
+- 直接 token：填写 `bearer_token`。
+- OAuth application flow：填写 `token_url`、`client_id`、`client_secret`。默认用 form body 发送 client 凭证；如果 PISTE 要求 HTTP Basic，把 `auth_style` 改为 `basic`。
 
 ## Légifrance
 
