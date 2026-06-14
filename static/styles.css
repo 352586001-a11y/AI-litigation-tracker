@@ -98,6 +98,40 @@ body.map-dashboard {
   gap: 10px;
 }
 
+.dimension-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.dimension-stack button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 1px solid var(--nordic-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #334858;
+  text-align: left;
+}
+
+.dimension-stack button.active {
+  color: #ffffff;
+  border-color: var(--nordic-blue);
+  background: var(--nordic-blue);
+}
+
+.dimension-stack span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dimension-stack strong {
+  font-size: 22px;
+}
+
 .layer-stack label {
   display: flex;
   align-items: center;
@@ -336,6 +370,30 @@ body.map-dashboard {
 
 .compact-types {
   margin-top: 12px;
+}
+
+.evidence-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.evidence-tabs button {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--nordic-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #334858;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.evidence-tabs button.active {
+  color: #ffffff;
+  border-color: var(--nordic-blue);
+  background: var(--nordic-blue);
 }
 
 .compact-filters button,

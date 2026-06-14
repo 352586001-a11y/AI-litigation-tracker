@@ -10,7 +10,7 @@
     <header class="monitor-topbar">
       <div>
         <p class="eyebrow">欧洲 AI 版权监控</p>
-        <h1>诉讼与情报态势地图</h1>
+        <h1>诉讼风险与证据流地图</h1>
       </div>
       <nav class="top-actions">
         <a class="nav-link" href="/admin.html">后台审核</a>
@@ -21,12 +21,20 @@
     <main class="monitor-shell">
       <aside class="layer-panel">
         <section>
-          <h2>监控图层</h2>
-          <div class="layer-stack">
-            <label><input type="checkbox" data-layer="litigation" checked /> 诉讼风险</label>
-            <label><input type="checkbox" data-layer="intel" checked /> 情报热度</label>
-            <label><input type="checkbox" data-layer="official" checked /> 官方文书</label>
-            <label><input type="checkbox" data-layer="p0" checked /> P0 权利主体</label>
+          <h2>监测维度</h2>
+          <div class="dimension-stack">
+            <button data-evidence="news" class="active">
+              <span>新闻</span>
+              <strong id="metricNews">0</strong>
+            </button>
+            <button data-evidence="official">
+              <span>官方诉讼文书</span>
+              <strong id="metricOfficial">0</strong>
+            </button>
+            <button data-evidence="rights">
+              <span>权利人集体发声</span>
+              <strong id="metricRights">0</strong>
+            </button>
           </div>
         </section>
 
@@ -59,13 +67,13 @@
           </div>
         </div>
 
-        <div class="nordic-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼与情报地图"></div>
+        <div class="nordic-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼风险地图"></div>
 
         <section class="case-ribbon">
           <div class="section-head">
             <div>
-              <h2>案件与监控对象</h2>
-              <p>点击卡片查看法院、文书和关联权利主体。</p>
+              <h2>诉讼与监控对象</h2>
+              <p>地图风险点合并展示案件数量、官方文书数量和情报信号。</p>
             </div>
           </div>
           <div class="case-grid" id="cases"></div>
@@ -75,8 +83,8 @@
       <aside class="intel-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">实时简报</p>
-            <h2>最新情报</h2>
+            <p class="eyebrow">按时间倒序</p>
+            <h2 id="evidenceTitle">新闻有哪些</h2>
           </div>
           <div class="filters compact-filters">
             <button data-filter="all" class="active">全部</button>
@@ -84,11 +92,10 @@
             <button data-filter="P1">P1</button>
           </div>
         </div>
-        <div class="type-filters compact-types">
-          <button data-type-filter="all" class="active">全部类型</button>
-          <button data-type-filter="news">新闻</button>
-          <button data-type-filter="rights_holder_statement">声明</button>
-          <button data-type-filter="official_court_document">官方</button>
+        <div class="evidence-tabs">
+          <button data-evidence="news" class="active">新闻</button>
+          <button data-evidence="official">官方文书</button>
+          <button data-evidence="rights">权利人发声</button>
         </div>
         <div id="intelCards" class="intel-feed"></div>
       </aside>
