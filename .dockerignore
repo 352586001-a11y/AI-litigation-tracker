@@ -1,0 +1,7 @@
+.git
+__pycache__/
+*.pyc
+data/
+logs/
+AI-litigation-tracker-upload.zip
+config/official-sources.local.json
