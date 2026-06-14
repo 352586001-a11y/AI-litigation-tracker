@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Europe AI Copyright Risk Tracker</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">24h Europe AI Copyright Monitor</p>
+        <h1>欧洲 AI 版权诉讼风险监控台</h1>
+      </div>
+      <nav class="top-actions">
+        <a class="nav-link" href="/admin.html">后台管理</a>
+        <button id="runMonitor" class="primary">运行监控</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="metrics" id="metrics"></section>
+
+      <section class="command-grid">
+        <section class="risk-map">
+          <div class="section-head">
+            <div>
+              <h2>欧洲风险地图</h2>
+              <p>以国家/法域为单位追踪诉讼、官方文书、权利组织动作和舆情信号。</p>
+            </div>
+            <div class="legend">
+              <span><i class="heat p0"></i>P0</span>
+              <span><i class="heat p1"></i>P1</span>
+              <span><i class="heat p2"></i>P2</span>
+              <span><i class="heat watch"></i>Watch</span>
+            </div>
+          </div>
+          <div id="riskMap" class="risk-matrix"></div>
+        </section>
+
+        <aside class="focus-panel">
+          <h2>P0 最高风险</h2>
+          <div id="p0Targets"></div>
+        </aside>
+      </section>
+
+      <section class="intel-section">
+        <div class="section-head">
+          <div>
+            <h2>已发布情报简报</h2>
+            <p>后台审核通过后自动同步到这里；未审核线索不会进入前端。</p>
+          </div>
+          <div class="filters">
+            <button data-filter="all" class="active">全部</button>
+            <button data-filter="P0">P0</button>
+            <button data-filter="P1">P1</button>
+            <button data-filter="P2">P2</button>
+          </div>
+          <div class="type-filters">
+            <button data-type-filter="all" class="active">全部类型</button>
+            <button data-type-filter="news">新闻</button>
+            <button data-type-filter="law_firm_statement">律所表态</button>
+            <button data-type-filter="rights_holder_statement">权利人声明</button>
+            <button data-type-filter="official_court_document">官方法院文件</button>
+          </div>
+        </div>
+        <div id="intelCards" class="intel-grid"></div>
+      </section>
+
+      <section class="case-section">
+        <div class="section-head">
+          <div>
+            <h2>案件与监控对象</h2>
+            <p>WATCH 是监控对象，LEAD 是线索，CASE 是已有官方确认或进入案件库。</p>
+          </div>
+        </div>
+        <div class="case-grid" id="cases"></div>
+      </section>
+    </main>
+
+    <dialog id="caseDialog">
+      <button class="close" id="closeDialog" aria-label="关闭">×</button>
+      <div id="caseDetail"></div>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

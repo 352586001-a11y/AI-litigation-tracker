@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tracker Admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Review Console</p>
+        <h1>情报审核后台</h1>
+      </div>
+      <nav class="top-actions">
+        <a class="nav-link" href="/">前端大图</a>
+        <button id="refreshAdmin" class="primary">刷新</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="admin-grid">
+        <form id="intelForm" class="admin-form">
+          <h2>新增情报卡片</h2>
+          <label>
+            标题
+            <input name="title" required placeholder="例如：SACD 发布 AI 版权声明" />
+          </label>
+          <label>
+            摘要
+            <textarea name="summary" required rows="5" placeholder="写给前端读者看的简报摘要"></textarea>
+          </label>
+          <label>
+            来源 URL
+            <input name="source_url" required placeholder="https://..." />
+          </label>
+          <div class="form-row">
+            <label>
+              风险
+              <select name="priority">
+                <option>P0</option>
+                <option>P1</option>
+                <option selected>P2</option>
+                <option>P3</option>
+              </select>
+            </label>
+            <label>
+              法域
+              <select name="jurisdiction">
+                <option selected>France</option>
+                <option>European Union</option>
+                <option>Germany</option>
+                <option>United Kingdom</option>
+                <option>Netherlands</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            情报类型
+            <select name="signal_type">
+              <option value="news" selected>新闻</option>
+              <option value="law_firm_statement">律所表态</option>
+              <option value="rights_holder_statement">权利人声明</option>
+              <option value="official_court_document">官方法院文件</option>
+            </select>
+          </label>
+          <div class="form-row">
+            <label>
+              置信级别
+              <select name="confidence">
+                <option>official</option>
+                <option>semi_official</option>
+                <option selected>media_lead</option>
+              </select>
+            </label>
+            <label>
+              风险增量
+              <input name="risk_delta" type="number" min="-20" max="20" value="3" />
+            </label>
+          </div>
+          <label>
+            组织 ID
+            <input name="organization_id" placeholder="org_sacd / org_figaro / org_sgdl" />
+          </label>
+          <label>
+            标签
+            <input name="tags" placeholder="SACD,OpenAI,opt-out" />
+          </label>
+          <button class="primary" type="submit">提交待审核</button>
+        </form>
+
+        <section class="admin-list">
+          <div class="section-head">
+            <div>
+              <h2>审核队列</h2>
+              <p>发布后会同步到前端“已发布情报简报”。</p>
+            </div>
+          </div>
+          <div id="adminCards" class="admin-cards"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/admin.js"></script>
+  </body>
+</html>
