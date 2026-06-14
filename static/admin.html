@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tracker Admin</title>
+    <title>情报审核后台</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">Review Console</p>
+        <p class="eyebrow">情报审核与发布</p>
         <h1>情报审核后台</h1>
       </div>
       <nav class="top-actions">
@@ -47,11 +47,11 @@
             <label>
               法域
               <select name="jurisdiction">
-                <option selected>France</option>
-                <option>European Union</option>
-                <option>Germany</option>
-                <option>United Kingdom</option>
-                <option>Netherlands</option>
+                <option value="France" selected>法国</option>
+                <option value="European Union">欧盟</option>
+                <option value="Germany">德国</option>
+                <option value="United Kingdom">英国</option>
+                <option value="Netherlands">荷兰</option>
               </select>
             </label>
           </div>
@@ -68,9 +68,9 @@
             <label>
               置信级别
               <select name="confidence">
-                <option>official</option>
-                <option>semi_official</option>
-                <option selected>media_lead</option>
+                <option value="official">官方</option>
+                <option value="semi_official">半官方</option>
+                <option value="media_lead" selected>媒体线索</option>
               </select>
             </label>
             <label>

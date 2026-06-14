@@ -6,7 +6,27 @@ const signalTypeLabels = {
   news: "新闻",
   law_firm_statement: "律所表态",
   rights_holder_statement: "权利人声明",
-  official_court_document: "官方法院文件",
+  official_court_document: "官方文件/法院文书",
+};
+
+const statusLabels = {
+  review: "待审核",
+  published: "已发布",
+  rejected: "已拒绝",
+};
+
+const confidenceLabels = {
+  official: "官方",
+  semi_official: "半官方",
+  media_lead: "媒体线索",
+};
+
+const jurisdictionLabels = {
+  France: "法国",
+  Germany: "德国",
+  "European Union": "欧盟",
+  "United Kingdom": "英国",
+  Netherlands: "荷兰",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -28,10 +48,10 @@ function renderCards() {
         <article class="admin-card ${item.status}">
           <div class="case-meta">
             ${priorityBadge(item.priority)}
-            <span class="pill">${item.status}</span>
+            <span class="pill">${statusLabels[item.status] || item.status}</span>
             <span class="pill type-pill">${signalTypeLabels[item.signal_type] || item.signal_type}</span>
-            <span class="pill">${item.confidence}</span>
-            <span class="pill">${item.jurisdiction}</span>
+            <span class="pill">${confidenceLabels[item.confidence] || item.confidence}</span>
+            <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
           </div>
           <h3>${item.title}</h3>
           <p>${item.summary}</p>

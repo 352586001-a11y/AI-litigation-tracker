@@ -347,6 +347,71 @@ def seed(conn):
         [row[:-1] + (row[-1], now, now, now if row[10] == "published" else None) for row in intel_cards],
     )
 
+    organization_cn = [
+        ("org_sacd", "法国戏剧作者与作曲者协会", "法国戏剧、影视、编剧和导演作者权益组织。任何 AI 训练数据、作者报酬或透明度线索都进入最高优先级审核。"),
+        ("org_figaro", "法国新闻出版集团", "高价值新闻语料权利人。重点监控版权、邻接权、数据库权、授权谈判和 opt-out 动态。"),
+        ("org_sgdl", "法国作家协会", "法国作家权益组织，和图书语料、Books3、AI 训练数据争议高度相关。"),
+        ("org_sne", "法国出版商协会", "法国出版业核心行业组织，图书出版与训练语料争议中的关键主体。"),
+        ("org_snac", "法国作者与作曲者工会", "作者和作曲者组织，适合监控集体维权和作者侧诉讼线索。"),
+        ("org_sacem", "法国音乐作者、作曲者和出版者协会", "音乐版权核心组织。重点监控歌词、音乐生成模型和训练数据授权争议。"),
+        ("org_scam", "法国多媒体作者协会", "纪录片、新闻、多媒体作者相关组织，和文本/视频语料训练风险相关。"),
+        ("org_adagp", "法国视觉艺术作者协会", "视觉艺术和图像权利组织，重点监控图片生成模型和图像训练数据。"),
+        ("org_afp", "法新社", "高价值新闻和图片语料来源，既可能诉讼，也可能通过授权协议解决。"),
+        ("org_arcom", "法国视听与数字通信监管机构", "监管信号源，不是权利人原告，但会影响平台合规和政策走向。"),
+        ("org_cnil", "法国数据保护监管机构", "数据保护监管机构，关注训练数据争议与个人数据、抓取合规的交叉风险。"),
+    ]
+    conn.executemany(
+        "UPDATE organizations SET full_name = ?, notes = ?, updated_at = ? WHERE id = ?",
+        [(full_name, notes, now, org_id) for org_id, full_name, notes in organization_cn],
+    )
+
+    case_cn = [
+        ("case_fr_meta_books3", "法国作者和出版商诉 Meta / Llama 训练语料案", "待官方文书确认", "SGDL、SNE、SNAC 针对 Meta/Llama 训练语料的法国诉讼线索，涉及受版权保护图书是否被未经授权用于训练。仍需抓取官方法院文书或案号。"),
+        ("case_watch_sacd_ai", "SACD AI 版权维权动态监控", "持续监控", "SACD 是 P0 监控对象。重点跟踪权利人声明、法院动作、AI Act 落地压力和创作者补偿主张。"),
+        ("case_watch_figaro_ai", "Le Figaro 新闻内容 AI 使用风险监控", "持续监控", "Groupe Figaro 是 P0 监控对象。重点跟踪诉讼、授权谈判、opt-out、邻接权和新闻语料复用线索。"),
+        ("case_eu_tdm_watch", "欧盟 TDM 例外与 AI Act 版权执行监控", "持续监控", "跟踪影响 AI 训练透明度、TDM 例外、opt-out 和 GPAI 合规的欧盟法院、官方解释和执行动态。"),
+    ]
+    conn.executemany(
+        "UPDATE cases SET title = ?, procedural_stage = ?, summary = ?, updated_at = ? WHERE id = ?",
+        [(title, stage, summary, now, case_id) for case_id, title, stage, summary in case_cn],
+    )
+
+    source_cn = [
+        ("source_judilibre", "Judilibre", "法国司法裁判开放数据 API，用于抓取官方裁判文书。"),
+        ("source_legifrance", "Légifrance", "法国官方法律信息门户，用于补充判例、法规和法律引用。"),
+        ("source_curia", "CURIA / CJEU", "欧盟法院和普通法院判例、意见和新闻稿来源。"),
+        ("source_eurlex", "EUR-Lex", "欧盟官方法律和判例数据库。"),
+        ("source_hudoc", "HUDOC", "欧洲人权法院数据库，用于外围表达自由和财产权风险。"),
+        ("source_sacd", "SACD 官方网站", "SACD 权利人声明和 AI 版权立场的 P0 监控源。"),
+        ("source_figaro", "Le Figaro / Groupe Figaro", "Le Figaro 诉讼、授权、邻接权和新闻语料信号源。"),
+    ]
+    conn.executemany(
+        "UPDATE sources SET name = ?, notes = ?, updated_at = ? WHERE id = ?",
+        [(name, notes, now, source_id) for source_id, name, notes in source_cn],
+    )
+
+    document_cn = [
+        ("doc_seed_judilibre", "Judilibre 官方 API 参考", "法国司法裁判开放数据来源，用于后续抓取案件官方文书。"),
+        ("doc_seed_eurlex", "EUR-Lex 欧盟官方法律数据库", "欧盟层面的法律、判例、AI Act 和版权执行监控来源。"),
+    ]
+    conn.executemany(
+        "UPDATE documents SET title = ?, extracted_text = ? WHERE id = ?",
+        [(title, text, doc_id) for doc_id, title, text in document_cn],
+    )
+
+    intel_cn = [
+        ("intel_de_gema_openai_guardian_2025_11_11", "德国法院判令 OpenAI 在 GEMA 版权案中赔偿", "The Guardian 报道德国法院认定 OpenAI 在 ChatGPT 歌词使用中构成版权侵权并需赔偿。该项属于欧洲范围内高信号诉讼情报，需要继续追踪原始判决和上诉动态。"),
+        ("intel_fr_meta_ap_2025_03_12", "法国作者和出版商就 AI 训练起诉 Meta", "AP 报道法国作者和出版商在巴黎针对 Meta 提起诉讼，指控其未经授权使用受版权保护图书训练 Llama。当前标记为法国 P1 诉讼线索，等待官方法院文书或案号确认。"),
+        ("intel_fr_meta_lemonde_2025_03_12", "Le Monde 报道法国作者和出版商攻击 Meta 版权侵权", "Le Monde 报道法国作者和出版商围绕 AI 训练对 Meta 发起版权侵权行动。该情报与 AP 报道相互印证，但仍需补齐官方法院文书、案号和程序状态。"),
+        ("intel_eu_ai_act_guardian_2025_02_18", "EU AI Act 版权漏洞争议升温", "The Guardian 报道权利人担心 AI Act 在版权和训练透明度方面留下漏洞。该情报归入欧盟层 P1，因为它可能影响训练数据披露、opt-out 和 GPAI 合规预期。"),
+        ("intel_sacd_lemonde_ai_summit_2025_02_09", "巴黎 AI 峰会前 SACD 出现在创作者版权压力报道中", "Le Monde 报道巴黎 AI 峰会前创作者阵营对受保护内容被 AI 使用表达强烈不满。SACD 仍为 P0，因为相关表态可能迅速转化为游说、opt-out 压力或诉讼策略。"),
+        ("intel_eu_ai_act_official_2024_07_12", "EU AI Act 官方文本纳入监控基线", "EUR-Lex 上的 EU AI Act 官方文本被纳入欧盟风险层监控，作为 GPAI 透明度和版权相关合规的法律基线。它不是法院判决，但属于官方法律来源。"),
+    ]
+    conn.executemany(
+        "UPDATE intelligence_cards SET title = ?, summary = ?, updated_at = ? WHERE id = ?",
+        [(title, summary, now, card_id) for card_id, title, summary in intel_cn],
+    )
+
 
 def rows(conn, query, params=()):
     return [dict(row) for row in conn.execute(query, params)]

@@ -14,61 +14,86 @@ const signalTypeLabels = {
   official_court_document: "\u5b98\u65b9\u6587\u4ef6/\u6cd5\u9662\u6587\u4e66",
 };
 
+const jurisdictionLabels = {
+  France: "\u6cd5\u56fd",
+  Germany: "\u5fb7\u56fd",
+  "European Union": "\u6b27\u76df",
+  "United Kingdom": "\u82f1\u56fd",
+  Netherlands: "\u8377\u5170",
+  Spain: "\u897f\u73ed\u7259",
+  Italy: "\u610f\u5927\u5229",
+  Nordics: "\u5317\u6b27",
+  "EU / CJEU": "\u6b27\u76df / \u6b27\u76df\u6cd5\u9662",
+};
+
+const statusLabels = {
+  WATCH: "\u76d1\u63a7\u4e2d",
+  LEAD: "\u7ebf\u7d22",
+  CASE: "\u6848\u4ef6",
+  CLOSED: "\u5df2\u7ed3\u675f",
+};
+
+const confidenceLabels = {
+  official: "\u5b98\u65b9",
+  semi_official: "\u534a\u5b98\u65b9",
+  media_lead: "\u5a92\u4f53\u7ebf\u7d22",
+};
+
 const jurisdictions = [
   {
     name: "France",
     priority: "P0",
     score: 97,
-    drivers: ["SACD", "Le Figaro", "Paris court", "Judilibre"],
+    drivers: ["SACD", "Le Figaro", "\u5df4\u9ece\u6cd5\u9662", "Judilibre"],
     summary: "\u521b\u4f5c\u8005\u7ec4\u7ec7\u548c\u65b0\u95fb\u51fa\u7248\u6743\u5229\u4eba\u53cc P0\uff0c\u5b98\u65b9\u6587\u4e66\u548c\u8206\u60c5\u90fd\u9700\u8981\u65e5\u7ea7\u76d1\u63a7\u3002",
   },
   {
     name: "EU / CJEU",
     priority: "P1",
     score: 84,
-    drivers: ["AI Act", "TDM opt-out", "CJEU references"],
+    drivers: ["AI Act", "TDM opt-out", "\u6b27\u76df\u6cd5\u9662"],
     summary: "\u5f71\u54cd\u5168\u6b27\u7684\u89e3\u91ca\u5c42\uff1a\u8bad\u7ec3\u6570\u636e\u900f\u660e\u5ea6\u3001TDM \u4f8b\u5916\u3001opt-out \u5408\u89c4\u3002",
   },
   {
     name: "Germany",
     priority: "P2",
     score: 67,
-    drivers: ["publishers", "image rights", "database right"],
+    drivers: ["\u51fa\u7248\u5546", "\u56fe\u50cf\u6743\u5229", "\u6570\u636e\u5e93\u6743"],
     summary: "\u5173\u6ce8\u51fa\u7248\u5546\u3001\u56fe\u7247\u6743\u5229\u4eba\u548c\u6570\u636e\u5e93\u6743\u8def\u5f84\u3002",
   },
   {
     name: "United Kingdom",
     priority: "P2",
     score: 70,
-    drivers: ["news corpus", "Getty-style claims", "licensing"],
+    drivers: ["\u65b0\u95fb\u8bed\u6599", "\u56fe\u50cf\u6743\u5229", "\u6388\u6743"],
     summary: "\u867d\u975e EU\uff0c\u4f46\u4f1a\u5f71\u54cd\u6b27\u6d32\u6388\u6743\u5e02\u573a\u548c\u5e73\u53f0\u7b56\u7565\u3002",
   },
   {
     name: "Netherlands",
     priority: "P2",
     score: 61,
-    drivers: ["platform jurisdiction", "scraping", "hosting"],
+    drivers: ["\u5e73\u53f0\u7ba1\u8f96", "\u6293\u53d6", "\u6258\u7ba1"],
     summary: "\u8de8\u5883\u5e73\u53f0\u3001\u6293\u53d6\u548c\u7ba1\u8f96\u98ce\u9669\u76d1\u63a7\u3002",
   },
   {
     name: "Spain",
     priority: "P3",
     score: 48,
-    drivers: ["media groups", "EU implementation"],
+    drivers: ["\u5a92\u4f53\u96c6\u56e2", "\u6b27\u76df\u843d\u5730"],
     summary: "\u4ee5\u5a92\u4f53\u6743\u5229\u4eba\u4e0e\u6b27\u76df\u5b9e\u65bd\u52a8\u6001\u4e3a\u4e3b\u3002",
   },
   {
     name: "Italy",
     priority: "P3",
     score: 52,
-    drivers: ["publishers", "regulators", "culture sector"],
+    drivers: ["\u51fa\u7248\u5546", "\u76d1\u7ba1\u673a\u6784", "\u6587\u5316\u884c\u4e1a"],
     summary: "\u5173\u6ce8\u51fa\u7248\u3001\u76d1\u7ba1\u58f0\u660e\u548c\u6587\u5316\u5185\u5bb9\u6388\u6743\u3002",
   },
   {
     name: "Nordics",
     priority: "P3",
     score: 45,
-    drivers: ["CMOs", "media alliances", "policy"],
+    drivers: ["\u96c6\u4f53\u7ba1\u7406\u7ec4\u7ec7", "\u5a92\u4f53\u8054\u76df", "\u653f\u7b56"],
     summary: "\u7248\u6743\u7ec4\u7ec7\u548c\u5a92\u4f53\u8054\u76df\u4fe1\u53f7\u76d1\u63a7\u3002",
   },
 ];
@@ -130,7 +155,7 @@ function renderMap(container, mode) {
       return `
         <article class="map-tile ${item.priority}" style="--x:${18 + (index % 4) * 25}%; --y:${22 + Math.floor(index / 4) * 42}%">
           <div class="risk-cell-head">
-            <h3>${item.name}</h3>
+            <h3>${jurisdictionLabels[item.name] || item.name}</h3>
             ${priorityBadge(item.priority)}
           </div>
           <div class="score-row">
@@ -177,8 +202,8 @@ function renderIntel() {
           <div class="case-meta">
             ${priorityBadge(item.priority)}
             <span class="pill type-pill">${signalTypeLabels[item.signal_type] || item.signal_type}</span>
-            <span class="pill">${item.confidence}</span>
-            <span class="pill">${item.jurisdiction}</span>
+            <span class="pill">${confidenceLabels[item.confidence] || item.confidence}</span>
+            <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
             <span class="pill">+${item.risk_delta}</span>
           </div>
           <h3>${item.title}</h3>
@@ -200,8 +225,8 @@ function renderCases() {
         <article class="case-card" data-case-id="${item.id}">
           <div class="case-meta">
             ${priorityBadge(item.priority)}
-            <span class="pill">${item.status}</span>
-            <span class="pill">${item.jurisdiction}</span>
+            <span class="pill">${statusLabels[item.status] || item.status}</span>
+            <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
             <span class="pill">${item.document_count} docs</span>
           </div>
           <h3>${item.title}</h3>
