@@ -36,6 +36,16 @@
           </label>
           <div class="form-row">
             <label>
+              来源名称
+              <input name="source_name" placeholder="例如：Le Monde / SACD / EUR-Lex" />
+            </label>
+            <label>
+              情报日期
+              <input name="signal_date" type="date" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label>
               风险
               <select name="priority">
                 <option>P0</option>
@@ -95,6 +105,28 @@
               <h2>审核队列</h2>
               <p>发布后会同步到前端“已发布情报简报”。</p>
             </div>
+          </div>
+          <div class="admin-toolbar">
+            <select id="statusFilter">
+              <option value="all">全部状态</option>
+              <option value="review">待审核</option>
+              <option value="published">已发布</option>
+              <option value="rejected">已拒绝</option>
+            </select>
+            <select id="priorityFilter">
+              <option value="all">全部风险</option>
+              <option>P0</option>
+              <option>P1</option>
+              <option>P2</option>
+              <option>P3</option>
+            </select>
+            <select id="typeFilter">
+              <option value="all">全部类型</option>
+              <option value="news">新闻</option>
+              <option value="law_firm_statement">律所表态</option>
+              <option value="rights_holder_statement">权利人声明</option>
+              <option value="official_court_document">官方文件/法院文书</option>
+            </select>
           </div>
           <div id="adminCards" class="admin-cards"></div>
         </section>

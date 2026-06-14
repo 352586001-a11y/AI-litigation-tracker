@@ -195,9 +195,10 @@ function renderIntel() {
     const typeMatch = state.typeFilter === "all" || item.signal_type === state.typeFilter;
     return priorityMatch && typeMatch;
   });
-  $("#intelCards").innerHTML = cards
-    .map(
-      (item) => `
+  $("#intelCards").innerHTML = cards.length
+    ? cards
+        .map(
+          (item) => `
         <article class="intel-card">
           <div class="case-meta">
             ${priorityBadge(item.priority)}
@@ -208,14 +209,19 @@ function renderIntel() {
           </div>
           <h3>${item.title}</h3>
           <p>${item.summary}</p>
+          <div class="meta-list">
+            <span>情报日期：${formatDate(item.signal_date || item.approved_at || item.created_at)}</span>
+            <span>来源类型：${signalTypeLabels[item.signal_type] || item.signal_type}</span>
+          </div>
           <div class="intel-foot">
             <span>${formatDate(item.signal_date || item.approved_at || item.created_at)} · ${item.organization_name || item.source_name}</span>
             <a href="${item.source_url}" target="_blank" rel="noreferrer">\u6765\u6e90</a>
           </div>
         </article>
       `
-    )
-    .join("");
+        )
+        .join("")
+    : `<div class="empty-state">当前筛选条件下没有已发布情报。</div>`;
 }
 
 function renderCases() {

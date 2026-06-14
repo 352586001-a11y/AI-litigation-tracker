@@ -902,6 +902,34 @@ textarea {
   margin-top: 12px;
 }
 
+.admin-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.meta-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 7px;
+  color: #4a5664;
+  background: #f4f7fa;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.empty-state {
+  padding: 22px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fafbfc;
+  font-weight: 700;
+}
+
 .case-card {
   min-height: 190px;
   padding: 14px;
@@ -1018,7 +1046,8 @@ dialog::backdrop {
   .intel-grid,
   .admin-cards,
   .form-row,
-  .target-grid {
+  .target-grid,
+  .admin-toolbar {
     grid-template-columns: 1fr;
   }
 
