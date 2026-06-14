@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>欧洲 AI 版权诉讼风险监控台</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="map-dashboard">
+    <header class="monitor-topbar">
+      <div>
+        <p class="eyebrow">欧洲 AI 版权监控</p>
+        <h1>诉讼风险与证据流地图</h1>
+      </div>
+      <nav class="top-actions">
+        <a class="nav-link" href="/admin.html">后台审核</a>
+        <button id="runMonitor" class="primary">运行监控</button>
+      </nav>
+    </header>
+
+    <main class="monitor-shell">
+      <aside class="layer-panel">
+        <section>
+          <h2>监测维度</h2>
+          <div class="dimension-stack">
+            <button data-evidence="news" class="active">
+              <span>新闻</span>
+              <strong id="metricNews">0</strong>
+            </button>
+            <button data-evidence="official">
+              <span>官方诉讼文书</span>
+              <strong id="metricOfficial">0</strong>
+            </button>
+            <button data-evidence="rights">
+              <span>权利人集体发声</span>
+              <strong id="metricRights">0</strong>
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <h2>时间范围</h2>
+          <div class="range-tabs">
+            <button data-range="7d">7 天</button>
+            <button data-range="30d">30 天</button>
+            <button data-range="all" class="active">全部</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>核心指标</h2>
+          <div class="mini-metrics" id="metrics"></div>
+        </section>
+      </aside>
+
+      <section class="map-command">
+        <div class="map-header">
+          <div>
+            <p class="eyebrow">Nordic Grey Blue View</p>
+            <h2>欧洲风险地图</h2>
+          </div>
+          <div class="map-legend">
+            <span><i class="heat p0"></i>P0</span>
+            <span><i class="heat p1"></i>P1</span>
+            <span><i class="heat p2"></i>P2</span>
+            <span><i class="heat watch"></i>监控</span>
+          </div>
+        </div>
+
+        <div class="nordic-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼风险地图"></div>
+
+        <section class="case-ribbon">
+          <div class="section-head">
+            <div>
+              <h2>诉讼与监控对象</h2>
+              <p>地图风险点合并展示案件数量、官方文书数量和情报信号。</p>
+            </div>
+          </div>
+          <div class="case-grid" id="cases"></div>
+        </section>
+      </section>
+
+      <aside class="intel-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">按时间倒序</p>
+            <h2 id="evidenceTitle">新闻有哪些</h2>
+          </div>
+          <div class="filters compact-filters">
+            <button data-filter="all" class="active">全部</button>
+            <button data-filter="P0">P0</button>
+            <button data-filter="P1">P1</button>
+          </div>
+        </div>
+        <div class="evidence-tabs">
+          <button data-evidence="news" class="active">新闻</button>
+          <button data-evidence="official">官方文书</button>
+          <button data-evidence="rights">权利人发声</button>
+        </div>
+        <div id="intelCards" class="intel-feed"></div>
+      </aside>
+    </main>
+
+    <dialog id="caseDialog">
+      <button class="close" id="closeDialog" aria-label="关闭">×</button>
+      <div id="caseDetail"></div>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

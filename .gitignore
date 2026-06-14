@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/
+logs/
+config/official-sources.local.json
+.DS_Store
