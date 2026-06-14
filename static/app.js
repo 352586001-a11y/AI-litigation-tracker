@@ -8,10 +8,10 @@ const state = {
 };
 
 const signalTypeLabels = {
-  news: "新闻",
-  law_firm_statement: "律所表态",
-  rights_holder_statement: "权利人声明",
-  official_court_document: "官方法院文件",
+  news: "\u65b0\u95fb",
+  law_firm_statement: "\u5f8b\u6240\u8868\u6001",
+  rights_holder_statement: "\u6743\u5229\u4eba\u58f0\u660e",
+  official_court_document: "\u5b98\u65b9\u6587\u4ef6/\u6cd5\u9662\u6587\u4e66",
 };
 
 const jurisdictions = [
@@ -20,56 +20,56 @@ const jurisdictions = [
     priority: "P0",
     score: 97,
     drivers: ["SACD", "Le Figaro", "Paris court", "Judilibre"],
-    summary: "创作者组织和新闻出版权利人双 P0，官方文书和舆情都需要日级监控。",
+    summary: "\u521b\u4f5c\u8005\u7ec4\u7ec7\u548c\u65b0\u95fb\u51fa\u7248\u6743\u5229\u4eba\u53cc P0\uff0c\u5b98\u65b9\u6587\u4e66\u548c\u8206\u60c5\u90fd\u9700\u8981\u65e5\u7ea7\u76d1\u63a7\u3002",
   },
   {
     name: "EU / CJEU",
     priority: "P1",
     score: 84,
     drivers: ["AI Act", "TDM opt-out", "CJEU references"],
-    summary: "影响全欧的解释层：训练数据透明度、TDM 例外、opt-out 合规。",
+    summary: "\u5f71\u54cd\u5168\u6b27\u7684\u89e3\u91ca\u5c42\uff1a\u8bad\u7ec3\u6570\u636e\u900f\u660e\u5ea6\u3001TDM \u4f8b\u5916\u3001opt-out \u5408\u89c4\u3002",
   },
   {
     name: "Germany",
     priority: "P2",
     score: 67,
     drivers: ["publishers", "image rights", "database right"],
-    summary: "关注出版商、图片权利人和数据库权路径。",
+    summary: "\u5173\u6ce8\u51fa\u7248\u5546\u3001\u56fe\u7247\u6743\u5229\u4eba\u548c\u6570\u636e\u5e93\u6743\u8def\u5f84\u3002",
   },
   {
     name: "United Kingdom",
     priority: "P2",
     score: 70,
     drivers: ["news corpus", "Getty-style claims", "licensing"],
-    summary: "虽非 EU，但会影响欧洲授权市场和平台策略。",
+    summary: "\u867d\u975e EU\uff0c\u4f46\u4f1a\u5f71\u54cd\u6b27\u6d32\u6388\u6743\u5e02\u573a\u548c\u5e73\u53f0\u7b56\u7565\u3002",
   },
   {
     name: "Netherlands",
     priority: "P2",
     score: 61,
     drivers: ["platform jurisdiction", "scraping", "hosting"],
-    summary: "跨境平台、抓取和管辖风险监控。",
+    summary: "\u8de8\u5883\u5e73\u53f0\u3001\u6293\u53d6\u548c\u7ba1\u8f96\u98ce\u9669\u76d1\u63a7\u3002",
   },
   {
     name: "Spain",
     priority: "P3",
     score: 48,
     drivers: ["media groups", "EU implementation"],
-    summary: "以媒体权利人与欧盟实施动态为主。",
+    summary: "\u4ee5\u5a92\u4f53\u6743\u5229\u4eba\u4e0e\u6b27\u76df\u5b9e\u65bd\u52a8\u6001\u4e3a\u4e3b\u3002",
   },
   {
     name: "Italy",
     priority: "P3",
     score: 52,
     drivers: ["publishers", "regulators", "culture sector"],
-    summary: "关注出版、监管声明和文化内容授权。",
+    summary: "\u5173\u6ce8\u51fa\u7248\u3001\u76d1\u7ba1\u58f0\u660e\u548c\u6587\u5316\u5185\u5bb9\u6388\u6743\u3002",
   },
   {
     name: "Nordics",
     priority: "P3",
     score: 45,
     drivers: ["CMOs", "media alliances", "policy"],
-    summary: "版权组织和媒体联盟信号监控。",
+    summary: "\u7248\u6743\u7ec4\u7ec7\u548c\u5a92\u4f53\u8054\u76df\u4fe1\u53f7\u76d1\u63a7\u3002",
   },
 ];
 
@@ -85,41 +85,65 @@ function priorityBadge(priority) {
   return `<span class="badge ${priority}">${priority}</span>`;
 }
 
+function formatDate(value) {
+  if (!value) return "\u65e0\u65e5\u671f";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return date.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
 function renderMetrics() {
   const p0 = state.organizations.filter((item) => item.priority === "P0").length;
-  const reviewEligible = state.intel.length;
   const officialDocs = state.documents.filter((item) => item.confidence === "official").length;
   const avgRisk = Math.round(
     state.cases.reduce((sum, item) => sum + item.risk_score, 0) / Math.max(state.cases.length, 1)
   );
   $("#metrics").innerHTML = [
-    ["P0 最高风险", p0],
-    ["已发布简报", reviewEligible],
-    ["官方文书", officialDocs],
-    ["平均风险", avgRisk],
+    ["P0 \u6700\u9ad8\u98ce\u9669", p0],
+    ["\u5df2\u53d1\u5e03\u7b80\u62a5", state.intel.length],
+    ["\u5b98\u65b9\u6587\u4e66", officialDocs],
+    ["\u5e73\u5747\u98ce\u9669", avgRisk],
   ]
     .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
     .join("");
 }
 
-function renderRiskMap() {
-  $("#riskMap").innerHTML = jurisdictions
-    .map(
-      (item) => `
-        <article class="risk-cell ${item.priority}">
+function countForJurisdiction(collection, name) {
+  if (name === "EU / CJEU") return collection.filter((item) => item.jurisdiction === "European Union").length;
+  return collection.filter((item) => item.jurisdiction === name).length;
+}
+
+function latestForJurisdiction(collection, name) {
+  const normalized = name === "EU / CJEU" ? "European Union" : name;
+  return collection.find((item) => item.jurisdiction === normalized);
+}
+
+function renderMap(container, mode) {
+  if (!container) return;
+  const isIntel = mode === "intel";
+  const source = isIntel ? state.intel : state.cases;
+  container.innerHTML = jurisdictions
+    .map((item, index) => {
+      const count = countForJurisdiction(source, item.name);
+      const latest = isIntel ? latestForJurisdiction(state.intel, item.name) : null;
+      const metric = isIntel ? count : item.score;
+      return `
+        <article class="map-tile ${item.priority}" style="--x:${18 + (index % 4) * 25}%; --y:${22 + Math.floor(index / 4) * 42}%">
           <div class="risk-cell-head">
             <h3>${item.name}</h3>
             ${priorityBadge(item.priority)}
           </div>
           <div class="score-row">
-            <strong>${item.score}</strong>
-            <div class="risk-bar"><span style="width:${item.score}%"></span></div>
+            <strong>${metric}</strong>
+            <div class="risk-bar"><span style="width:${isIntel ? Math.min(count * 30, 100) : item.score}%"></span></div>
           </div>
-          <p>${item.summary}</p>
-          <div class="driver-list">${item.drivers.map((driver) => `<span>${driver}</span>`).join("")}</div>
+          <p>${isIntel ? `${count} \u6761\u5df2\u53d1\u5e03\u60c5\u62a5${latest ? `\uff0c\u6700\u65b0 ${formatDate(latest.signal_date || latest.approved_at || latest.created_at)}` : ""}` : item.summary}</p>
+          <div class="driver-list">
+            ${(isIntel ? ["\u65b0\u95fb", "\u5f8b\u6240", "\u6743\u5229\u4eba", "\u5b98\u65b9\u6587\u4ef6"] : item.drivers).map((driver) => `<span>${driver}</span>`).join("")}
+          </div>
         </article>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -160,8 +184,8 @@ function renderIntel() {
           <h3>${item.title}</h3>
           <p>${item.summary}</p>
           <div class="intel-foot">
-            <span>${item.organization_name || item.source_name}</span>
-            <a href="${item.source_url}" target="_blank" rel="noreferrer">来源</a>
+            <span>${formatDate(item.signal_date || item.approved_at || item.created_at)} · ${item.organization_name || item.source_name}</span>
+            <a href="${item.source_url}" target="_blank" rel="noreferrer">\u6765\u6e90</a>
           </div>
         </article>
       `
@@ -205,16 +229,16 @@ async function showCase(caseId) {
     <h2>${item.title}</h2>
     <p>${item.summary}</p>
     <div class="detail-block">
-      <h3>法院与标识</h3>
-      <p>${item.court || "待确认"} · ${item.case_number || "无案号"} · ${item.ecli || "无 ECLI"}</p>
+      <h3>\u6cd5\u9662\u4e0e\u6807\u8bc6</h3>
+      <p>${item.court || "\u5f85\u786e\u8ba4"} · ${item.case_number || "\u65e0\u6848\u53f7"} · ${item.ecli || "\u65e0 ECLI"}</p>
     </div>
     <div class="detail-block">
-      <h3>权利主体</h3>
-      <p>${item.organizations.map((org) => `${org.name} (${org.role})`).join(", ") || "未绑定"}</p>
+      <h3>\u6743\u5229\u4e3b\u4f53</h3>
+      <p>${item.organizations.map((org) => `${org.name} (${org.role})`).join(", ") || "\u672a\u7ed1\u5b9a"}</p>
     </div>
     <div class="detail-block">
-      <h3>官方文书</h3>
-      <p>${item.documents.length ? item.documents.map((doc) => doc.title).join(", ") : "暂无案件文书，保持监控。"}</p>
+      <h3>\u5b98\u65b9\u6587\u4e66</h3>
+      <p>${item.documents.length ? item.documents.map((doc) => doc.title).join(", ") : "\u6682\u65e0\u6848\u4ef6\u6587\u4e66\uff0c\u4fdd\u6301\u76d1\u63a7\u3002"}</p>
     </div>
   `;
   $("#caseDialog").showModal();
@@ -243,11 +267,11 @@ function attachEvents() {
 
   $("#runMonitor").addEventListener("click", async () => {
     $("#runMonitor").disabled = true;
-    $("#runMonitor").textContent = "监控中";
+    $("#runMonitor").textContent = "\u76d1\u63a7\u4e2d";
     await api("/api/monitor/run", { method: "POST" });
     await load();
     $("#runMonitor").disabled = false;
-    $("#runMonitor").textContent = "运行监控";
+    $("#runMonitor").textContent = "\u8fd0\u884c\u76d1\u63a7";
   });
 }
 
@@ -263,7 +287,8 @@ async function load() {
   state.documents = documents;
   state.intel = intel;
   renderMetrics();
-  renderRiskMap();
+  renderMap($("#litigationMap"), "litigation");
+  renderMap($("#intelMap"), "intel");
   renderP0Targets();
   renderIntel();
   renderCases();
@@ -271,5 +296,5 @@ async function load() {
 
 attachEvents();
 load().catch((error) => {
-  document.body.innerHTML = `<main><h1>加载失败</h1><pre>${error.message}</pre></main>`;
+  document.body.innerHTML = `<main><h1>\u52a0\u8f7d\u5931\u8d25</h1><pre>${error.message}</pre></main>`;
 });

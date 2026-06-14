@@ -228,55 +228,112 @@ def seed(conn):
 
     intel_cards = [
         (
-            "intel_sacd_ai_act_pressure",
-            "SACD intensifies AI copyright pressure",
-            "SACD is treated as a P0 creator-side signal because public AI-policy pressure can quickly become litigation or lobbying leverage around training transparency and remuneration.",
-            "https://www.sacd.fr/",
-            "SACD official site",
-            "official_site",
+            "intel_fr_meta_ap_2025_03_12",
+            "French authors and publishers sue Meta over AI training",
+            "AP reported that French authors and publishers brought a Paris action against Meta over alleged unauthorized use of copyrighted books to train Llama. Treat as a France P1 litigation lead until an official court document is captured.",
+            "https://apnews.com/article/168b32059e70d0509b0a6ac407f37e8a",
+            "AP News",
+            "news",
+            "France",
+            "org_sgdl",
+            "case_fr_meta_books3",
+            "P1",
+            "published",
+            "news",
+            "Meta,Llama,Books3,SGDL,SNE,SNAC,Paris",
+            "media_lead",
+            8,
+            "2025-03-12T00:00:00+00:00",
+        ),
+        (
+            "intel_fr_meta_lemonde_2025_03_12",
+            "Le Monde reports French authors and publishers attack Meta",
+            "Le Monde reported that authors and publishers attacked Meta for copyright violation tied to AI training. This corroborates the France Meta/Llama litigation lead but still needs official case-number capture.",
+            "https://www.lemonde.fr/economie/article/2025/03/12/auteurs-et-editeurs-attaquent-meta-pour-violation-du-droit-d-auteur_6579662_3234.html",
+            "Le Monde",
+            "news",
+            "France",
+            "org_sne",
+            "case_fr_meta_books3",
+            "P1",
+            "published",
+            "news",
+            "Meta,Llama,authors,publishers,copyright",
+            "media_lead",
+            7,
+            "2025-03-12T00:00:00+00:00",
+        ),
+        (
+            "intel_sacd_lemonde_ai_summit_2025_02_09",
+            "SACD cited in creator pushback before Paris AI summit",
+            "Le Monde reported creator-side pressure over alleged use of protected content by AI systems before the Paris AI summit. SACD remains P0 because statements can quickly translate into lobbying, opt-out pressure or litigation strategy.",
+            "https://www.lemonde.fr/en/economy/article/2025/02/09/ai-manufacturers-have-stolen-all-our-content-how-creators-are-trying-to-assert-their-rights_6737965_19.html",
+            "Le Monde",
+            "news",
             "France",
             "org_sacd",
             "case_watch_sacd_ai",
             "P0",
             "published",
-            "rights_holder_statement",
-            "SACD,AI Act,training transparency,creator remuneration",
-            "official",
-            8,
+            "news",
+            "SACD,AI summit,creators,copyright,training data",
+            "media_lead",
+            9,
+            "2025-02-09T00:00:00+00:00",
         ),
         (
-            "intel_figaro_watch",
-            "Le Figaro added as P0 media rights-holder watch",
-            "Groupe Figaro is monitored as a high-value French news corpus owner. Signals around licensing, neighboring rights, opt-outs or AI search reuse should move directly into review.",
-            "https://www.lefigaro.fr/",
-            "Le Figaro",
-            "publisher_site",
-            "France",
-            "org_figaro",
-            "case_watch_figaro_ai",
-            "P0",
+            "intel_eu_ai_act_guardian_2025_02_18",
+            "EU AI Act copyright loophole debate intensifies",
+            "The Guardian reported rights-holder concern that the AI Act leaves loopholes around copyright and training transparency. Track at EU level because it can shape enforcement and disclosure expectations.",
+            "https://www.theguardian.com/technology/2025/feb/18/eu-accused-of-opening-the-door-to-ai-copyright-loophole",
+            "The Guardian",
+            "news",
+            "European Union",
+            None,
+            "case_eu_tdm_watch",
+            "P1",
             "published",
             "news",
-            "Le Figaro,neighboring rights,news corpus,opt-out",
-            "semi_official",
-            7,
+            "AI Act,copyright,training transparency,opt-out",
+            "media_lead",
+            5,
+            "2025-02-18T00:00:00+00:00",
         ),
         (
-            "intel_meta_fr_review",
-            "French authors and publishers v. Meta remains document-capture priority",
-            "The reported Meta/Llama training-data action is kept as P1 until an official court document, case number or judgment is captured.",
-            "https://www.legifrance.gouv.fr/",
-            "Official document pending",
-            "official_portal",
-            "France",
-            "org_sgdl",
-            "case_fr_meta_books3",
-            "P1",
-            "review",
+            "intel_de_gema_openai_guardian_2025_11_11",
+            "German court orders OpenAI to pay damages in GEMA copyright case",
+            "The Guardian reported a German court ruling ordering OpenAI to pay damages over song lyric use in ChatGPT. This is a high-signal European litigation item and should be followed for the underlying judgment and appeals.",
+            "https://www.theguardian.com/technology/2025/nov/11/german-court-orders-openai-to-pay-damages-for-copyright-breach-in-landmark-ruling",
+            "The Guardian",
             "news",
-            "Meta,Llama,Books3,SGDL,SNE,SNAC",
+            "Germany",
+            None,
+            None,
+            "P1",
+            "published",
+            "news",
+            "GEMA,OpenAI,ChatGPT,lyrics,Germany,copyright",
             "media_lead",
+            10,
+            "2025-11-11T00:00:00+00:00",
+        ),
+        (
+            "intel_eu_ai_act_official_2024_07_12",
+            "EU AI Act official text entered the monitoring base",
+            "The official EU AI Act text is monitored as the legal baseline for GPAI transparency and copyright-related compliance. It is not a court document, but it is an official legal source for the EU risk layer.",
+            "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+            "EUR-Lex",
+            "official_legal_database",
+            "European Union",
+            None,
+            "case_eu_tdm_watch",
+            "P1",
+            "published",
+            "official_court_document",
+            "AI Act,EUR-Lex,GPAI,copyright,transparency",
+            "official",
             6,
+            "2024-07-12T00:00:00+00:00",
         ),
     ]
     conn.executemany(
@@ -287,7 +344,7 @@ def seed(conn):
          signal_date, created_at, updated_at, approved_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        [row + (now, now, now, now if row[10] == "published" else None) for row in intel_cards],
+        [row[:-1] + (row[-1], now, now, now if row[10] == "published" else None) for row in intel_cards],
     )
 
 
@@ -518,7 +575,7 @@ class Handler(SimpleHTTPRequestHandler):
                             LEFT JOIN organizations o ON o.id = ic.organization_id
                             LEFT JOIN cases c ON c.id = ic.case_id
                             WHERE ic.status = ?
-                            ORDER BY ic.priority, ic.created_at DESC
+                            ORDER BY COALESCE(ic.signal_date, ic.approved_at, ic.created_at) DESC, ic.priority
                             """,
                             (status,),
                         )
@@ -534,8 +591,8 @@ class Handler(SimpleHTTPRequestHandler):
                             LEFT JOIN cases c ON c.id = ic.case_id
                             ORDER BY
                               CASE ic.status WHEN 'review' THEN 0 WHEN 'published' THEN 1 ELSE 2 END,
-                              ic.priority,
-                              ic.created_at DESC
+                              COALESCE(ic.signal_date, ic.approved_at, ic.created_at) DESC,
+                              ic.priority
                             """,
                         )
                     )
@@ -632,7 +689,7 @@ def main():
     if args.init_db or args.reset_db or not DB_PATH.exists():
         init_db(reset=args.reset_db)
         safe_print(f"Database ready: {DB_PATH}")
-        if args.init_db and not args.reset_db:
+        if args.init_db:
             return
 
     if args.monitor_loop:
