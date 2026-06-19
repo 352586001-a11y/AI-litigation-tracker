@@ -6,7 +6,9 @@ import os
 import sqlite3
 import sys
 import time
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+from html import unescape
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -61,6 +63,90 @@ OFFICIAL_SOURCE_CONFIGS = {
         "registration_url": "https://curia.europa.eu/",
         "notes": "欧盟法院官方门户。当前列为官方入口归档源，后续接新闻稿/RSS/检索。",
     },
+}
+
+MONITOR_NEWS_QUERIES = [
+    {
+        "id": "news_eu_ai_copyright_litigation",
+        "query": '"artificial intelligence" copyright lawsuit Europe OR "AI copyright" litigation Europe',
+        "jurisdiction": "European Union",
+        "priority": "P1",
+        "tags": "AI copyright,Europe,litigation",
+    },
+    {
+        "id": "news_fr_ai_copyright",
+        "query": '"intelligence artificielle" "droit d\'auteur" France procès OR plainte',
+        "jurisdiction": "France",
+        "priority": "P1",
+        "tags": "France,AI,droit auteur,litigation",
+    },
+    {
+        "id": "news_de_ai_copyright",
+        "query": 'GEMA OpenAI Suno KI Urheberrecht Klage',
+        "jurisdiction": "Germany",
+        "priority": "P1",
+        "tags": "Germany,GEMA,OpenAI,Suno,copyright",
+    },
+    {
+        "id": "news_uk_ai_copyright",
+        "query": 'Getty Stability AI copyright lawsuit UK',
+        "jurisdiction": "United Kingdom",
+        "priority": "P1",
+        "tags": "United Kingdom,Getty,Stability AI,copyright",
+    },
+]
+
+RIGHTS_HOLDER_MONITORS = [
+    {
+        "id": "rights_sacd",
+        "query": 'domain:sacd.fr intelligence artificielle droit auteur',
+        "organization_id": "org_sacd",
+        "jurisdiction": "France",
+        "priority": "P0",
+        "tags": "SACD,rights-holder,AI,copyright",
+    },
+    {
+        "id": "rights_figaro",
+        "query": 'domain:lefigaro.fr intelligence artificielle droit auteur OpenAI',
+        "organization_id": "org_figaro",
+        "jurisdiction": "France",
+        "priority": "P0",
+        "tags": "Le Figaro,rights-holder,AI,copyright",
+    },
+    {
+        "id": "rights_gema",
+        "query": 'domain:gema.de OpenAI Suno KI Urheberrecht',
+        "organization_id": "org_gema",
+        "jurisdiction": "Germany",
+        "priority": "P1",
+        "tags": "GEMA,rights-holder,AI,copyright",
+    },
+    {
+        "id": "rights_sgdl_sne",
+        "query": 'SGDL SNE Meta Llama droit auteur intelligence artificielle',
+        "organization_id": "org_sgdl",
+        "jurisdiction": "France",
+        "priority": "P1",
+        "tags": "SGDL,SNE,Meta,Llama,rights-holder",
+    },
+]
+
+NEWS_DOMAIN_ALLOWLIST = {
+    "reuters.com": "Reuters",
+    "apnews.com": "AP News",
+    "lemonde.fr": "Le Monde",
+    "lefigaro.fr": "Le Figaro",
+    "theguardian.com": "The Guardian",
+    "politico.eu": "Politico Europe",
+    "euractiv.com": "Euractiv",
+    "lawfaremedia.org": "Lawfare",
+    "musicbusinessworldwide.com": "Music Business Worldwide",
+    "juve-patent.com": "JUVE Patent",
+    "thetechnollama.wordpress.com": "The Technollama",
+    "sacd.fr": "SACD",
+    "gema.de": "GEMA",
+    "sgdl.org": "SGDL",
+    "sne.fr": "SNE",
 }
 
 
@@ -160,7 +246,7 @@ def official_source_status(conn):
     return status_rows
 
 
-def request_json(url, token="", headers=None, payload=None):
+def request_json(url, token="", headers=None, payload=None, timeout=30):
     request_headers = {
         "Accept": "application/json",
         "User-Agent": "AI-Copyright-Risk-Tracker/0.1",
@@ -176,7 +262,7 @@ def request_json(url, token="", headers=None, payload=None):
         request_headers["Content-Type"] = "application/json"
         method = "POST"
     req = Request(url, data=data, headers=request_headers, method=method)
-    with urlopen(req, timeout=30) as response:
+    with urlopen(req, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8", errors="replace"))
 
 
@@ -845,11 +931,226 @@ def row(conn, query, params=()):
     return dict(item) if item else None
 
 
+def gdelt_date_to_iso(value):
+    if not value:
+        return utc_now()
+    value = str(value)
+    try:
+        if len(value) >= 14:
+            parsed = datetime.strptime(value[:14], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+            return parsed.replace(microsecond=0).isoformat()
+        if len(value) >= 8:
+            parsed = datetime.strptime(value[:8], "%Y%m%d").replace(tzinfo=timezone.utc)
+            return parsed.replace(microsecond=0).isoformat()
+    except ValueError:
+        pass
+    return utc_now()
+
+
+def clean_text(value):
+    return " ".join(unescape(str(value or "")).split())
+
+
+def source_name_for_url(url, fallback="GDELT"):
+    host = urlparse(url or "").netloc.lower().replace("www.", "")
+    for domain, name in NEWS_DOMAIN_ALLOWLIST.items():
+        if host.endswith(domain):
+            return name
+    return fallback
+
+
+def is_allowed_monitor_url(url):
+    host = urlparse(url or "").netloc.lower().replace("www.", "")
+    return any(host.endswith(domain) for domain in NEWS_DOMAIN_ALLOWLIST)
+
+
+def request_gdelt_articles(query, max_records=6):
+    params = urlencode(
+        {
+            "query": query,
+            "mode": "ArtList",
+            "format": "json",
+            "maxrecords": max_records,
+            "sort": "DateDesc",
+        }
+    )
+    url = f"https://api.gdeltproject.org/api/v2/doc/doc?{params}"
+    try:
+        payload = request_json(url, timeout=3)
+    except Exception:
+        return []
+    return payload.get("articles", []) if isinstance(payload, dict) else []
+
+
+def insert_monitor_card(conn, card):
+    now = utc_now()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO intelligence_cards
+        (id, title, summary, source_url, source_name, source_type, jurisdiction, organization_id,
+         case_id, priority, status, signal_type, tags, confidence, risk_delta,
+         signal_date, created_at, updated_at, approved_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            card["id"],
+            card["title"],
+            card["summary"],
+            card["source_url"],
+            card["source_name"],
+            card["source_type"],
+            card["jurisdiction"],
+            card.get("organization_id"),
+            card.get("case_id"),
+            card["priority"],
+            "review",
+            card["signal_type"],
+            card["tags"],
+            card["confidence"],
+            card["risk_delta"],
+            card["signal_date"],
+            now,
+            now,
+            None,
+        ),
+    )
+
+
+def run_gdelt_monitor(conn):
+    inserted = 0
+    checked = 0
+    errors = []
+    for config in MONITOR_NEWS_QUERIES:
+        try:
+            for article in request_gdelt_articles(config["query"]):
+                checked += 1
+                url = article.get("url") or ""
+                if not url or not is_allowed_monitor_url(url):
+                    continue
+                title = clean_text(article.get("title"))
+                if not title:
+                    continue
+                source_name = source_name_for_url(url)
+                card_id = f"intel_gdelt_{stable_hash(config['id'], url)[:16]}"
+                before = conn.total_changes
+                insert_monitor_card(
+                    conn,
+                    {
+                        "id": card_id,
+                        "title": title,
+                        "summary": f"公共新闻索引命中“{config['query']}”。来源为 {source_name}，需人工审核是否与欧洲 AI 版权诉讼或立法动态相关。",
+                        "source_url": url,
+                        "source_name": source_name,
+                        "source_type": "news",
+                        "jurisdiction": config["jurisdiction"],
+                        "priority": config["priority"],
+                        "signal_type": "news",
+                        "tags": config["tags"],
+                        "confidence": "media_lead",
+                        "risk_delta": 4,
+                        "signal_date": gdelt_date_to_iso(article.get("seendate")),
+                    },
+                )
+                if conn.total_changes > before:
+                    inserted += 1
+        except Exception as exc:
+            errors.append({"query": config["id"], "error": str(exc)[:240]})
+    return {"source": "gdelt_news", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
+
+
+def run_rights_holder_monitor(conn):
+    inserted = 0
+    checked = 0
+    errors = []
+    for config in RIGHTS_HOLDER_MONITORS:
+        try:
+            for article in request_gdelt_articles(config["query"], max_records=8):
+                checked += 1
+                url = article.get("url") or ""
+                if not url:
+                    continue
+                title = clean_text(article.get("title"))
+                if not title:
+                    continue
+                source_name = source_name_for_url(url, "Rights holder source")
+                card_id = f"intel_rights_{stable_hash(config['id'], url)[:16]}"
+                before = conn.total_changes
+                insert_monitor_card(
+                    conn,
+                    {
+                        "id": card_id,
+                        "title": title,
+                        "summary": f"权利人/行业组织动态监控命中“{config['query']}”。该信号可能与集体维权、授权谈判、AI 训练透明度或诉讼策略有关，需后台审核。",
+                        "source_url": url,
+                        "source_name": source_name,
+                        "source_type": "official_site",
+                        "jurisdiction": config["jurisdiction"],
+                        "organization_id": config.get("organization_id"),
+                        "priority": config["priority"],
+                        "signal_type": "rights_holder_statement",
+                        "tags": config["tags"],
+                        "confidence": "semi_official",
+                        "risk_delta": 6 if config["priority"] == "P0" else 4,
+                        "signal_date": gdelt_date_to_iso(article.get("seendate")),
+                    },
+                )
+                if conn.total_changes > before:
+                    inserted += 1
+        except Exception as exc:
+            errors.append({"query": config["id"], "error": str(exc)[:240]})
+    return {"source": "rights_holder_domains", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
+
+
+def source_health(conn):
+    items = rows(conn, "SELECT * FROM sources ORDER BY jurisdiction, name")
+    health = []
+    for item in items:
+        doc_count = row(conn, "SELECT COUNT(*) AS count FROM documents WHERE source_id = ?", (item["id"],))["count"]
+        health.append(
+            {
+                **item,
+                "document_count": doc_count,
+                "configured": item["source_type"] not in {"official_api"} or item["last_checked_at"] is not None,
+            }
+        )
+    health.extend(
+        [
+            {
+                "id": "source_gdelt_news",
+                "name": "GDELT public news index",
+                "source_type": "news_index",
+                "jurisdiction": "Europe",
+                "base_url": "https://api.gdeltproject.org/api/v2/doc/doc",
+                "refresh_cadence": "hourly",
+                "notes": "公共新闻发现层。只接收白名单媒体和权利人域名，所有命中进入后台审核。",
+                "last_checked_at": row(conn, "SELECT MAX(started_at) AS last FROM monitor_runs WHERE notes LIKE '%gdelt_news%'")["last"],
+                "document_count": 0,
+                "configured": True,
+            },
+            {
+                "id": "source_rights_holder_domains",
+                "name": "Rights-holder domain monitor",
+                "source_type": "rights_holder_monitor",
+                "jurisdiction": "Europe",
+                "base_url": "SACD / Le Figaro / GEMA / SGDL / SNE domains via GDELT",
+                "refresh_cadence": "hourly",
+                "notes": "权利人官网和行业组织发声发现层，命中后进入后台审核。",
+                "last_checked_at": row(conn, "SELECT MAX(started_at) AS last FROM monitor_runs WHERE notes LIKE '%rights_holder_domains%'")["last"],
+                "document_count": 0,
+                "configured": True,
+            },
+        ]
+    )
+    return health
+
+
 def run_monitor():
     now = utc_now()
     with connect() as conn:
         source_rows = rows(conn, "SELECT * FROM sources ORDER BY name")
+        monitor_results = [run_gdelt_monitor(conn), run_rights_holder_monitor(conn)]
         run_id = "run_" + now.replace(":", "").replace("+", "Z")
+        inserted = sum(item.get("inserted_review_cards", 0) for item in monitor_results)
         conn.execute(
             "INSERT INTO monitor_runs (id, status, started_at, completed_at, notes) VALUES (?, ?, ?, ?, ?)",
             (
@@ -857,7 +1158,7 @@ def run_monitor():
                 "completed",
                 now,
                 utc_now(),
-                "Connector dry run completed. Official-source adapters are configured; production fetch requires source credentials and legal review.",
+                json.dumps({"results": monitor_results, "inserted_review_cards": inserted}, ensure_ascii=False),
             ),
         )
         for source in source_rows:
@@ -1194,6 +1495,8 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json(rows(conn, "SELECT * FROM organizations ORDER BY priority, risk_score DESC, name"))
                 if parsed.path == "/api/sources":
                     return self.send_json(rows(conn, "SELECT * FROM sources ORDER BY jurisdiction, name"))
+                if parsed.path == "/api/source-health":
+                    return self.send_json(source_health(conn))
                 if parsed.path == "/api/documents":
                     return self.send_json(rows(conn, "SELECT * FROM documents ORDER BY captured_at DESC, created_at DESC"))
                 if parsed.path == "/api/admin/official-sources":

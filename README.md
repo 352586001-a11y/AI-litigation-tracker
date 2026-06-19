@@ -45,8 +45,21 @@ The monitor loop currently runs every 60 minutes.
 - `POST /api/admin/intel/publish`
 - `POST /api/admin/intel/reject`
 - `GET /api/sources`
+- `GET /api/source-health`
 - `GET /api/monitor/keywords`
 - `POST /api/monitor/run`
+- `POST /api/official-documents/run`
+
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md).
+
+The repository includes:
+
+- `Dockerfile` for Render Docker deployment
+- `render.yaml` for a web service and hourly cron
+- `.github/workflows/monitor.yml` for GitHub Actions monitoring
+- `scripts/run_monitor_once.py` for triggering the deployed monitor
 
 ## Intelligence Types
 

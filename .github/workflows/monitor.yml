@@ -1,0 +1,35 @@
+name: Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deployed monitor
+        env:
+          TRACKER_BASE_URL: ${{ secrets.TRACKER_BASE_URL }}
+        run: |
+          if [ -z "$TRACKER_BASE_URL" ]; then
+            echo "TRACKER_BASE_URL secret is not set"
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          base = os.environ["TRACKER_BASE_URL"].rstrip("/")
+          results = {}
+          for name, path in {
+              "monitor": "/api/monitor/run",
+              "official_documents": "/api/official-documents/run",
+          }.items():
+              req = urllib.request.Request(base + path, method="POST")
+              with urllib.request.urlopen(req, timeout=120) as response:
+                  results[name] = json.loads(response.read().decode("utf-8"))
+          print(json.dumps(results, ensure_ascii=False, indent=2))
+          PY

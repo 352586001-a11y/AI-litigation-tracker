@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ai-litigation-tracker
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/health
+
+  - type: cron
+    name: ai-litigation-monitor-hourly
+    env: docker
+    plan: free
+    schedule: "0 * * * *"
+    dockerCommand: "python scripts/run_monitor_once.py $TRACKER_BASE_URL"
+    envVars:
+      - key: TRACKER_BASE_URL
+        sync: false

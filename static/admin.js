@@ -1,6 +1,7 @@
 const adminState = {
   cards: [],
   officialSources: [],
+  sourceHealth: [],
   statusFilter: "all",
   priorityFilter: "all",
   typeFilter: "all",
@@ -88,6 +89,31 @@ function renderOfficialSources() {
     .join("");
 }
 
+function renderSourceHealth() {
+  const target = $("#sourceHealth");
+  if (!target) return;
+  target.innerHTML = adminState.sourceHealth
+    .map((item) => {
+      const status = item.configured ? "可运行" : "待配置";
+      return `
+        <article class="source-card ${item.configured ? "configured" : "pending"}">
+          <div class="case-meta">
+            <span class="pill">${status}</span>
+            <span class="pill">${item.refresh_cadence || "按需"}</span>
+          </div>
+          <h3>${item.name}</h3>
+          <p>${item.notes || item.base_url}</p>
+          <div class="meta-list">
+            <span>类型：${sourceTypeLabels[item.source_type] || item.source_type}</span>
+            <span>法域：${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
+            <span>最近检查：${formatDate(item.last_checked_at)}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function filteredCards() {
   return adminState.cards.filter((item) => {
     const statusMatch = adminState.statusFilter === "all" || item.status === adminState.statusFilter;
@@ -134,13 +160,16 @@ function renderCards() {
 }
 
 async function load() {
-  const [cards, officialSources] = await Promise.all([
+  const [cards, officialSources, sourceHealth] = await Promise.all([
     api("/api/admin/intel"),
     api("/api/admin/official-sources"),
+    api("/api/source-health"),
   ]);
   adminState.cards = cards;
   adminState.officialSources = officialSources;
+  adminState.sourceHealth = sourceHealth;
   renderOfficialSources();
+  renderSourceHealth();
   renderCards();
 }
 

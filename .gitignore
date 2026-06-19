@@ -3,4 +3,6 @@ __pycache__/
 data/
 logs/
 config/official-sources.local.json
+AI-litigation-tracker-upload.zip
+AI-litigation-tracker-upload/
 .DS_Store

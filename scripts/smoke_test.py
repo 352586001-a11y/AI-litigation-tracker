@@ -31,7 +31,7 @@ def main():
     admin_intel = get_json("/api/admin/intel")
     sacd = get_json("/api/cases/case_watch_sacd_ai")
     monitor_result = urllib.request.Request("http://127.0.0.1:8899/api/monitor/run", method="POST")
-    with urllib.request.urlopen(monitor_result, timeout=5) as response:
+    with urllib.request.urlopen(monitor_result, timeout=60) as response:
         run = json.loads(response.read().decode("utf-8"))
 
     assert health["ok"] is True
