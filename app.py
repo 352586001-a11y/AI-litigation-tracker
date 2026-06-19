@@ -1293,11 +1293,19 @@ def source_health(conn):
     health = []
     for item in items:
         doc_count = row(conn, "SELECT COUNT(*) AS count FROM documents WHERE source_id = ?", (item["id"],))["count"]
+        configured = item["source_type"] not in {"official_api"} or item["last_checked_at"] is not None
+        if item["id"] in OFFICIAL_SOURCE_CONFIGS:
+            runtime = official_config_for(item["id"])
+            needs_token = bool(runtime["credential_key"])
+            has_direct_token = bool(runtime["bearer_token"])
+            has_key_id = bool(runtime["key_id"] or runtime["extra_headers"].get("KeyId"))
+            has_oauth_credentials = bool(runtime["client_id"] and runtime["client_secret"] and runtime["token_url"])
+            configured = bool(runtime["search_url"]) and (not needs_token or has_direct_token or has_key_id or has_oauth_credentials)
         health.append(
             {
                 **item,
                 "document_count": doc_count,
-                "configured": item["source_type"] not in {"official_api"} or item["last_checked_at"] is not None,
+                "configured": configured,
             }
         )
     health.extend(

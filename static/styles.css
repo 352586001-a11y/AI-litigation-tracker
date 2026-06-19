@@ -37,6 +37,680 @@ body.map-dashboard {
     var(--nordic-bg);
 }
 
+body.monitor-world {
+  min-height: 100vh;
+  overflow: hidden;
+  color: #dce7ee;
+  background: #111922;
+}
+
+.wm-shell {
+  display: grid;
+  grid-template-columns: 286px minmax(520px, 1fr) 390px;
+  grid-template-rows: 64px minmax(0, 1fr) 116px;
+  grid-template-areas:
+    "top top top"
+    "left map right"
+    "left timeline right";
+  gap: 10px;
+  height: 100vh;
+  padding: 10px;
+  background:
+    linear-gradient(90deg, rgba(75, 102, 119, 0.10) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(75, 102, 119, 0.10) 1px, transparent 1px),
+    linear-gradient(180deg, #15212b, #101820);
+  background-size: 44px 44px, 44px 44px, auto;
+}
+
+.wm-topbar,
+.wm-left-dock,
+.wm-right-dock,
+.wm-map-stage,
+.wm-case-dock,
+.wm-timeline {
+  border: 1px solid rgba(137, 163, 181, 0.25);
+  border-radius: 8px;
+  background: rgba(19, 31, 40, 0.88);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.wm-topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+}
+
+.wm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 320px;
+}
+
+.wm-live-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #7fc7b2;
+  box-shadow: 0 0 0 6px rgba(127, 199, 178, 0.12);
+}
+
+.wm-brand p,
+.wm-map-toolbar p,
+.wm-intel-head p,
+.wm-section-title span {
+  margin: 0;
+  color: #8fb0c1;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.wm-brand h1 {
+  margin: 2px 0 0;
+  color: #f4f8fb;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.wm-status-strip,
+.wm-actions,
+.wm-map-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wm-status-strip span,
+.wm-map-controls span {
+  min-height: 30px;
+  padding: 7px 10px;
+  border: 1px solid rgba(139, 164, 181, 0.22);
+  border-radius: 6px;
+  color: #cfe0e9;
+  background: rgba(224, 237, 245, 0.08);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wm-actions a,
+.wm-actions button,
+.wm-map-controls button {
+  min-height: 32px;
+  border: 1px solid rgba(156, 183, 199, 0.26);
+  border-radius: 6px;
+  padding: 0 12px;
+  color: #eef6f9;
+  background: rgba(88, 122, 142, 0.28);
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.wm-actions button {
+  border-color: rgba(127, 199, 178, 0.44);
+  background: #41677d;
+}
+
+.wm-left-dock {
+  grid-area: left;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.wm-layout {
+  grid-area: map;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 188px;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.wm-right-dock {
+  grid-area: right;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.wm-timeline {
+  grid-area: timeline;
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.wm-panel-block + .wm-panel-block {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(137, 163, 181, 0.18);
+}
+
+.wm-section-title {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.wm-section-title strong {
+  color: #f0f6fa;
+  font-size: 15px;
+}
+
+.wm-layer-stack,
+.wm-source-stack,
+.wm-metrics {
+  display: grid;
+  gap: 8px;
+}
+
+.wm-layer-stack button,
+.wm-source-item,
+.wm-metrics article {
+  border: 1px solid rgba(137, 163, 181, 0.20);
+  border-radius: 7px;
+  background: rgba(231, 241, 247, 0.07);
+}
+
+.wm-layer-stack button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 9px 10px;
+  color: #dce9ef;
+  text-align: left;
+}
+
+.wm-layer-stack button.active {
+  border-color: rgba(127, 199, 178, 0.62);
+  color: #ffffff;
+  background: rgba(65, 103, 125, 0.72);
+}
+
+.wm-layer-stack span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.wm-layer-stack strong {
+  font-size: 20px;
+}
+
+.wm-range-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.wm-range-tabs button {
+  min-height: 32px;
+  border-color: rgba(137, 163, 181, 0.22);
+  color: #dce9ef;
+  background: rgba(231, 241, 247, 0.07);
+  font-size: 12px;
+}
+
+.wm-range-tabs button.active {
+  color: #ffffff;
+  background: #41677d;
+}
+
+.wm-metrics article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+}
+
+.wm-metrics span,
+.wm-source-item em {
+  color: #91aaba;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.wm-metrics strong {
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.wm-source-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+  padding: 9px 10px;
+}
+
+.wm-source-item span {
+  color: #e7f0f5;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wm-source-item strong {
+  color: #7fc7b2;
+  font-size: 11px;
+}
+
+.wm-source-item.pending strong {
+  color: #d6a36b;
+}
+
+.wm-source-item em {
+  grid-column: 1 / -1;
+}
+
+.wm-map-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.wm-map-toolbar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wm-map-toolbar h2,
+.wm-intel-head h2 {
+  margin: 2px 0 0;
+  color: #f3f8fb;
+  font-size: 17px;
+}
+
+.wm-map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(127, 160, 180, 0.14) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(127, 160, 180, 0.14) 1px, transparent 1px),
+    #172532;
+  background-size: 58px 58px, 58px 58px, auto;
+}
+
+.wm-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 44%, rgba(127, 160, 180, 0.12) 45%, transparent 46%),
+    linear-gradient(25deg, transparent 48%, rgba(127, 160, 180, 0.10) 49%, transparent 50%);
+}
+
+.wm-map-label {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  color: rgba(205, 224, 234, 0.10);
+  font-size: 82px;
+  font-weight: 900;
+}
+
+.wm-europe-shape {
+  position: absolute;
+  inset: 82px 86px 72px;
+  border: 1px solid rgba(171, 195, 207, 0.16);
+  background: rgba(222, 235, 242, 0.16);
+  clip-path: polygon(26% 18%, 39% 9%, 58% 13%, 73% 26%, 78% 42%, 68% 57%, 73% 78%, 56% 89%, 44% 78%, 34% 86%, 22% 72%, 17% 58%, 21% 43%, 13% 30%);
+}
+
+.wm-route {
+  position: absolute;
+  z-index: 1;
+  height: 1px;
+  transform-origin: left center;
+  background: rgba(127, 199, 178, 0.30);
+}
+
+.wm-route.r1 {
+  left: 43%;
+  top: 58%;
+  width: 19%;
+  transform: rotate(-22deg);
+}
+
+.wm-route.r2 {
+  left: 50%;
+  top: 44%;
+  width: 16%;
+  transform: rotate(28deg);
+}
+
+.wm-route.r3 {
+  left: 38%;
+  top: 55%;
+  width: 12%;
+  transform: rotate(-62deg);
+}
+
+.wm-source-pin {
+  position: absolute;
+  z-index: 2;
+  padding: 5px 8px;
+  border: 1px solid rgba(127, 199, 178, 0.35);
+  border-radius: 999px;
+  color: #dff4ef;
+  background: rgba(41, 62, 74, 0.78);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.wm-map-point {
+  position: absolute;
+  z-index: 3;
+  width: 152px;
+  min-height: 94px;
+  transform: translate(-50%, -50%);
+  padding: 10px;
+  border: 1px solid rgba(162, 184, 198, 0.35);
+  border-radius: 8px;
+  color: #eaf3f6;
+  text-align: left;
+  background: rgba(25, 39, 50, 0.92);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.30);
+}
+
+.wm-map-point.P0 {
+  border-color: rgba(220, 117, 117, 0.62);
+  background: rgba(139, 62, 72, 0.95);
+}
+
+.wm-map-point.P1 {
+  border-color: rgba(216, 165, 102, 0.55);
+  background: rgba(124, 95, 57, 0.95);
+}
+
+.wm-map-point.active {
+  outline: 2px solid rgba(127, 199, 178, 0.8);
+}
+
+.wm-map-point span,
+.wm-map-point strong,
+.wm-map-point em {
+  display: block;
+}
+
+.wm-map-point span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.wm-map-point strong {
+  margin-top: 5px;
+  font-size: 22px;
+}
+
+.wm-map-point em {
+  margin-top: 5px;
+  color: rgba(237, 246, 249, 0.84);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.wm-map-point i {
+  display: block;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.wm-case-dock {
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.wm-case-strip {
+  display: grid;
+  grid-auto-columns: minmax(260px, 1fr);
+  grid-auto-flow: column;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.wm-case-card,
+.wm-intel-card {
+  border: 1px solid rgba(137, 163, 181, 0.22);
+  border-radius: 8px;
+  background: rgba(231, 241, 247, 0.07);
+}
+
+.wm-case-card {
+  min-height: 124px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.wm-case-card h3,
+.wm-intel-card h3 {
+  margin-bottom: 7px;
+  color: #f2f7fa;
+  font-size: 15px;
+  line-height: 1.32;
+}
+
+.wm-case-card p,
+.wm-intel-card p {
+  color: #aebfca;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.wm-intel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wm-priority-filter button,
+.wm-evidence-tabs button {
+  min-height: 30px;
+  border-color: rgba(137, 163, 181, 0.22);
+  color: #dce9ef;
+  background: rgba(231, 241, 247, 0.07);
+  font-size: 12px;
+}
+
+.wm-priority-filter button.active,
+.wm-evidence-tabs button.active {
+  color: #ffffff;
+  background: #41677d;
+}
+
+.wm-evidence-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.wm-intel-feed {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.wm-intel-card {
+  padding: 12px;
+}
+
+.wm-intel-card.P0 {
+  border-color: rgba(220, 117, 117, 0.55);
+}
+
+.wm-intel-card.P1 {
+  border-color: rgba(216, 165, 102, 0.48);
+}
+
+.wm-timeline-track {
+  display: grid;
+  grid-auto-columns: minmax(190px, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.wm-timeline-item {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-height: 78px;
+  padding: 9px;
+  border: 1px solid rgba(137, 163, 181, 0.22);
+  border-radius: 7px;
+  color: #dce9ef;
+  text-align: left;
+  background: rgba(231, 241, 247, 0.07);
+}
+
+.wm-timeline-item span {
+  color: #91aaba;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.wm-timeline-item strong {
+  color: #f2f7fa;
+  font-size: 12px;
+}
+
+.wm-timeline-item em {
+  color: #aebfca;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.monitor-world .pill {
+  color: #dce9ef;
+  background: rgba(224, 237, 245, 0.12);
+}
+
+.monitor-world .type-pill {
+  color: #e7f6f0;
+  background: rgba(127, 199, 178, 0.18);
+}
+
+.monitor-world .meta-list {
+  color: #aebfca;
+  background: rgba(224, 237, 245, 0.08);
+}
+
+.monitor-world .intel-foot {
+  border-color: rgba(137, 163, 181, 0.20);
+  color: #91aaba;
+}
+
+.monitor-world .intel-foot a {
+  color: #9bd2e6;
+}
+
+.monitor-world .empty-state {
+  border-color: rgba(137, 163, 181, 0.30);
+  color: #aebfca;
+  background: rgba(231, 241, 247, 0.06);
+}
+
+.monitor-world dialog {
+  color: #1e2933;
+}
+
+@media (max-width: 1180px) {
+  body.monitor-world {
+    overflow: auto;
+  }
+
+  .wm-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(620px, 72vh) auto auto;
+    grid-template-areas:
+      "top"
+      "left"
+      "map"
+      "timeline"
+      "right";
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .wm-topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wm-brand {
+    min-width: 0;
+  }
+
+  .wm-left-dock,
+  .wm-right-dock {
+    overflow: visible;
+  }
+
+  .wm-layout {
+    min-height: 720px;
+  }
+
+  .wm-timeline {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .wm-shell {
+    padding: 8px;
+  }
+
+  .wm-layer-stack,
+  .wm-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wm-layout {
+    grid-template-rows: minmax(520px, 68vh) auto;
+  }
+
+  .wm-map-toolbar {
+    flex-direction: column;
+  }
+
+  .wm-map-point {
+    width: 126px;
+    min-height: 86px;
+  }
+
+  .wm-map-point em {
+    display: none;
+  }
+
+  .wm-case-strip,
+  .wm-timeline-track {
+    grid-auto-columns: minmax(230px, 86vw);
+  }
+}
+
 .monitor-topbar {
   display: flex;
   align-items: center;

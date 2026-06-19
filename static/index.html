@@ -3,26 +3,37 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>欧洲 AI 版权诉讼风险监控台</title>
+    <title>欧洲 AI 版权态势监控</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body class="map-dashboard">
-    <header class="monitor-topbar">
-      <div>
-        <p class="eyebrow">欧洲 AI 版权监控</p>
-        <h1>诉讼、立法与权利人动态地图</h1>
-      </div>
-      <nav class="top-actions">
-        <a class="nav-link" href="/admin.html">后台审核</a>
-        <button id="runMonitor" class="primary">运行监控</button>
-      </nav>
-    </header>
+  <body class="monitor-world">
+    <div class="wm-shell">
+      <header class="wm-topbar">
+        <div class="wm-brand">
+          <span class="wm-live-dot"></span>
+          <div>
+            <p>AI COPYRIGHT EUROPE</p>
+            <h1>欧洲版权诉讼与立法态势监控</h1>
+          </div>
+        </div>
+        <div class="wm-status-strip">
+          <span id="systemClock">--:-- UTC</span>
+          <span id="activeJurisdiction">全欧洲视图</span>
+          <span id="activeLayerName">新闻层</span>
+        </div>
+        <nav class="wm-actions">
+          <a href="/admin.html">后台审核</a>
+          <button id="runMonitor">运行监控</button>
+        </nav>
+      </header>
 
-    <main class="monitor-shell">
-      <aside class="layer-panel">
-        <section>
-          <h2>监测维度</h2>
-          <div class="dimension-stack">
+      <aside class="wm-left-dock">
+        <section class="wm-panel-block">
+          <div class="wm-section-title">
+            <span>LAYERS</span>
+            <strong>监控图层</strong>
+          </div>
+          <div class="wm-layer-stack">
             <button data-evidence="news" class="active">
               <span>新闻</span>
               <strong id="metricNews">0</strong>
@@ -42,69 +53,91 @@
           </div>
         </section>
 
-        <section>
-          <h2>时间范围</h2>
-          <div class="range-tabs">
+        <section class="wm-panel-block">
+          <div class="wm-section-title">
+            <span>RANGE</span>
+            <strong>时间窗口</strong>
+          </div>
+          <div class="wm-range-tabs">
             <button data-range="7d">7 天</button>
             <button data-range="30d">30 天</button>
             <button data-range="all" class="active">全部</button>
           </div>
         </section>
 
-        <section>
-          <h2>核心指标</h2>
-          <div class="mini-metrics" id="metrics"></div>
+        <section class="wm-panel-block">
+          <div class="wm-section-title">
+            <span>STATUS</span>
+            <strong>核心指标</strong>
+          </div>
+          <div class="wm-metrics" id="metrics"></div>
+        </section>
+
+        <section class="wm-panel-block">
+          <div class="wm-section-title">
+            <span>SOURCES</span>
+            <strong>源状态</strong>
+          </div>
+          <div class="wm-source-stack" id="sourceStack"></div>
         </section>
       </aside>
 
-      <section class="map-command">
-        <div class="map-header">
-          <div>
-            <p class="eyebrow">Nordic Grey Blue View</p>
-            <h2>欧洲风险地图</h2>
-          </div>
-          <div class="map-legend">
-            <span><i class="heat p0"></i>P0</span>
-            <span><i class="heat p1"></i>P1</span>
-            <span><i class="heat p2"></i>P2</span>
-            <span><i class="heat watch"></i>监控</span>
-          </div>
-        </div>
-
-        <div class="nordic-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼、立法与权利人动态地图"></div>
-
-        <section class="case-ribbon">
-          <div class="section-head">
+      <main class="wm-layout">
+        <section class="wm-map-stage">
+          <div class="wm-map-toolbar">
             <div>
-              <h2>诉讼与监控对象</h2>
-              <p>点击案件查看新闻、官方文书、权利人发声和立法动态的聚合证据链。</p>
+              <p>Nordic Grey Blue Command Map</p>
+              <h2>欧洲版权风险地图</h2>
+            </div>
+            <div class="wm-map-controls">
+              <button id="resetJurisdiction">全欧洲</button>
+              <span>lat 50.1</span>
+              <span>lon 10.2</span>
+              <span>zoom 4.2</span>
             </div>
           </div>
-          <div class="case-grid" id="cases"></div>
-        </section>
-      </section>
 
-      <aside class="intel-panel">
-        <div class="panel-head">
+          <div class="wm-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼、立法与权利人动态地图"></div>
+        </section>
+
+        <section class="wm-case-dock">
+          <div class="wm-section-title">
+            <span>WATCHLIST</span>
+            <strong>诉讼与监控对象</strong>
+          </div>
+          <div class="wm-case-strip" id="cases"></div>
+        </section>
+      </main>
+
+      <aside class="wm-right-dock">
+        <div class="wm-intel-head">
           <div>
-            <p class="eyebrow">按时间倒序</p>
+            <p>按时间倒序</p>
             <h2 id="evidenceTitle">新闻有哪些</h2>
           </div>
-          <div class="filters compact-filters">
+          <div class="filters wm-priority-filter">
             <button data-filter="all" class="active">全部</button>
             <button data-filter="P0">P0</button>
             <button data-filter="P1">P1</button>
           </div>
         </div>
-        <div class="evidence-tabs">
+        <div class="wm-evidence-tabs">
           <button data-evidence="news" class="active">新闻</button>
-          <button data-evidence="official">官方文书</button>
-          <button data-evidence="rights">权利人发声</button>
-          <button data-evidence="legislation">立法动态</button>
+          <button data-evidence="official">文书</button>
+          <button data-evidence="rights">权利人</button>
+          <button data-evidence="legislation">立法</button>
         </div>
-        <div id="intelCards" class="intel-feed"></div>
+        <div id="intelCards" class="wm-intel-feed"></div>
       </aside>
-    </main>
+
+      <footer class="wm-timeline">
+        <div class="wm-section-title">
+          <span>TIMELINE</span>
+          <strong>最新信号</strong>
+        </div>
+        <div class="wm-timeline-track" id="timelineItems"></div>
+      </footer>
+    </div>
 
     <dialog id="caseDialog">
       <button class="close" id="closeDialog" aria-label="关闭">×</button>

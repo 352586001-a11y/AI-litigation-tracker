@@ -3,9 +3,13 @@ const state = {
   organizations: [],
   documents: [],
   intel: [],
+  sources: [],
   filter: "all",
   evidence: "news",
   range: "all",
+  selectedJurisdiction: null,
+  lastUpdated: null,
+  refreshMs: 60000,
 };
 
 const signalTypeLabels = {
@@ -14,6 +18,13 @@ const signalTypeLabels = {
   rights_holder_statement: "权利人声明",
   official_court_document: "官方文件/法院文书",
   legislation_update: "立法动态",
+};
+
+const layerLabels = {
+  news: "新闻层",
+  official: "官方文书层",
+  rights: "权利人发声层",
+  legislation: "立法动态层",
 };
 
 const jurisdictionLabels = {
@@ -79,9 +90,7 @@ function escapeHtml(value) {
 
 function safeUrl(value) {
   const url = String(value || "").trim();
-  if (!url) return "#";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return "#";
+  return url.startsWith("http://") || url.startsWith("https://") ? url : "#";
 }
 
 function priorityBadge(priority) {
@@ -93,6 +102,13 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
   return date.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+function formatTime(value) {
+  if (!value) return "--:--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--:--";
+  return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 function sortDate(item) {
@@ -109,6 +125,10 @@ function inRange(item) {
   if (Number.isNaN(time)) return true;
   const days = state.range === "7d" ? 7 : 30;
   return Date.now() - time <= days * 24 * 60 * 60 * 1000;
+}
+
+function inSelectedJurisdiction(item) {
+  return !state.selectedJurisdiction || item.jurisdiction === state.selectedJurisdiction;
 }
 
 function orgById(id) {
@@ -174,19 +194,35 @@ function getOfficialEvidence() {
   const officialIntel = state.intel
     .filter((item) => item.signal_type === "official_court_document")
     .map((item) => ({ ...item, evidence_kind: "official", sort_date: item.signal_date || item.approved_at || item.created_at }));
-  return sortByTimeDesc([...officialIntel, ...documentItems]).filter(inRange);
+  return sortByTimeDesc([...officialIntel, ...documentItems]).filter(inRange).filter(inSelectedJurisdiction);
 }
 
-function getEvidenceItems() {
-  if (state.evidence === "official") return getOfficialEvidence();
+function getEvidenceItems(layer = state.evidence) {
+  if (layer === "official") return getOfficialEvidence();
 
   const filtered = state.intel.filter((item) => {
-    if (state.evidence === "news") return item.signal_type === "news";
-    if (state.evidence === "rights") return isRightsVoice(item);
+    if (layer === "news") return item.signal_type === "news";
+    if (layer === "rights") return isRightsVoice(item);
     return isLegislationSignal(item);
   });
 
-  return sortByTimeDesc(filtered.map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at }))).filter(inRange);
+  return sortByTimeDesc(filtered.map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at })))
+    .filter(inRange)
+    .filter(inSelectedJurisdiction);
+}
+
+function getAllSignals() {
+  const documentSignals = state.documents.map((doc) => ({
+    ...doc,
+    title: doc.title,
+    summary: doc.summary_cn || doc.extracted_text || "官方文书已归档。",
+    source_name: doc.source_id || "官方文书源",
+    priority: doc.confidence === "official" ? "P1" : "P2",
+    signal_type: "official_court_document",
+    sort_date: doc.document_date || doc.captured_at || doc.created_at,
+  }));
+  const intelSignals = state.intel.map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at }));
+  return sortByTimeDesc([...intelSignals, ...documentSignals]).filter(inRange);
 }
 
 function renderMetrics() {
@@ -202,12 +238,12 @@ function renderMetrics() {
 
   $("#metrics").innerHTML = [
     ["案件", state.cases.length],
-    ["新闻", news],
+    ["P0 对象", state.cases.filter((item) => item.priority === "P0").length],
+    ["情报卡", state.intel.length],
     ["官方文书", official],
-    ["权利人发声", rights],
-    ["立法动态", legislation],
+    ["最近更新", state.lastUpdated ? formatTime(state.lastUpdated) : "--:--"],
   ]
-    .map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${value}</strong></article>`)
+    .map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`)
     .join("");
 }
 
@@ -219,13 +255,14 @@ function renderMap() {
       const docCount = docsForJurisdiction(item.name).length;
       const intelCount = intelItems.length;
       const legislationCount = intelItems.filter(isLegislationSignal).length;
+      const isActive = state.selectedJurisdiction === item.name;
       if (caseCount + intelCount + docCount === 0 && item.priority !== "P0") return "";
       const intensity = Math.min(100, item.score + intelCount * 4 + docCount * 6 + legislationCount * 3);
       return `
-        <button class="map-point ${escapeHtml(item.priority)}" style="left:${item.x}%; top:${item.y}%;" data-jurisdiction="${escapeHtml(item.name)}">
+        <button class="wm-map-point ${escapeHtml(item.priority)} ${isActive ? "active" : ""}" style="left:${item.x}%; top:${item.y}%;" data-jurisdiction="${escapeHtml(item.name)}">
           <span>${escapeHtml(item.label)}</span>
           <strong>${escapeHtml(item.priority)}</strong>
-          <em>${caseCount} 案件 · ${docCount} 文书 · ${intelCount} 情报</em>
+          <em>${caseCount} 案件 · ${docCount} 文书 · ${intelCount} 信号</em>
           <i style="width:${intensity}%"></i>
         </button>
       `;
@@ -233,13 +270,26 @@ function renderMap() {
     .join("");
 
   $("#nordicMap").innerHTML = `
-    <div class="map-watermark">EUROPE</div>
-    <div class="map-shape"></div>
-    <div class="map-grid-lines"></div>
-    <div class="map-pin official" style="left:58%; top:47%;">EUR-Lex</div>
-    <div class="map-pin official" style="left:42%; top:63%;">Judilibre</div>
+    <div class="wm-grid"></div>
+    <div class="wm-map-label">EUROPE</div>
+    <div class="wm-europe-shape"></div>
+    <div class="wm-route r1"></div>
+    <div class="wm-route r2"></div>
+    <div class="wm-route r3"></div>
+    <div class="wm-source-pin" style="left:58%; top:47%;">EUR-Lex</div>
+    <div class="wm-source-pin" style="left:42%; top:63%;">Judilibre</div>
+    <div class="wm-source-pin" style="left:44%; top:55%;">SACD</div>
+    <div class="wm-source-pin" style="left:46%; top:54%;">Figaro</div>
     ${points}
   `;
+
+  document.querySelectorAll(".wm-map-point").forEach((point) => {
+    point.addEventListener("click", () => {
+      state.selectedJurisdiction = point.dataset.jurisdiction;
+      updateSelectedJurisdiction();
+      renderAll();
+    });
+  });
 }
 
 function renderIntel() {
@@ -248,7 +298,7 @@ function renderIntel() {
   $("#evidenceTitle").textContent = evidenceTitles[state.evidence];
   const cards = getEvidenceItems().filter((item) => state.filter === "all" || item.priority === state.filter);
   target.innerHTML = cards.length
-    ? cards.map(renderIntelCard).join("")
+    ? cards.slice(0, 40).map(renderIntelCard).join("")
     : `<div class="empty-state">当前筛选条件下没有证据卡片。</div>`;
 }
 
@@ -259,7 +309,7 @@ function renderIntelCard(item) {
   const signalType = signalTypeLabels[item.signal_type] || "情报";
   const date = formatDate(sortDate(item));
   return `
-    <article class="intel-feed-card ${escapeHtml(state.evidence)}">
+    <article class="wm-intel-card ${escapeHtml(item.priority || "P2")}">
       <div class="case-meta">
         ${priorityBadge(item.priority || "P2")}
         <span class="pill type-pill">${escapeHtml(signalType)}</span>
@@ -280,10 +330,11 @@ function renderIntelCard(item) {
 }
 
 function renderCases() {
-  $("#cases").innerHTML = state.cases
+  const visibleCases = state.cases.filter((item) => !state.selectedJurisdiction || item.jurisdiction === state.selectedJurisdiction);
+  $("#cases").innerHTML = visibleCases
     .map(
       (item) => `
-        <article class="case-card" data-case-id="${escapeHtml(item.id)}">
+        <article class="wm-case-card" data-case-id="${escapeHtml(item.id)}">
           <div class="case-meta">
             ${priorityBadge(item.priority)}
             <span class="pill">${escapeHtml(statusLabels[item.status] || item.status)}</span>
@@ -298,9 +349,46 @@ function renderCases() {
     )
     .join("");
 
-  document.querySelectorAll(".case-card").forEach((card) => {
+  document.querySelectorAll(".wm-case-card").forEach((card) => {
     card.addEventListener("click", () => showCase(card.dataset.caseId));
   });
+}
+
+function renderSources() {
+  const target = $("#sourceStack");
+  if (!target) return;
+  const sourceItems = state.sources.length ? state.sources : [];
+  target.innerHTML = sourceItems
+    .slice(0, 8)
+    .map((source) => {
+      const checked = source.last_checked_at ? formatDate(source.last_checked_at) : "未检查";
+      return `
+        <article class="wm-source-item ${source.configured ? "configured" : "pending"}">
+          <span>${escapeHtml(source.name)}</span>
+          <strong>${source.configured ? "已接入" : "待凭证"}</strong>
+          <em>${escapeHtml(checked)}</em>
+        </article>
+      `;
+    })
+    .join("") || `<div class="empty-state">源状态加载中。</div>`;
+}
+
+function renderTimeline() {
+  const target = $("#timelineItems");
+  if (!target) return;
+  const signals = getAllSignals().filter(inSelectedJurisdiction).slice(0, 14);
+  target.innerHTML = signals
+    .map((item) => {
+      const signalType = signalTypeLabels[item.signal_type] || "情报";
+      return `
+        <button class="wm-timeline-item ${escapeHtml(item.priority || "P2")}" title="${escapeHtml(item.title)}">
+          <span>${escapeHtml(formatDate(sortDate(item)))}</span>
+          <strong>${escapeHtml(signalType)}</strong>
+          <em>${escapeHtml((item.title || "").slice(0, 36))}</em>
+        </button>
+      `;
+    })
+    .join("") || `<div class="empty-state">暂无时间线信号。</div>`;
 }
 
 function renderCaseEvidence(item) {
@@ -370,10 +458,31 @@ async function showCase(caseId) {
   $("#caseDialog").showModal();
 }
 
+function updateSelectedJurisdiction() {
+  const label = state.selectedJurisdiction ? jurisdictionLabels[state.selectedJurisdiction] || state.selectedJurisdiction : "全欧洲视图";
+  $("#activeJurisdiction").textContent = label;
+}
+
+function updateClock() {
+  const now = new Date();
+  $("#systemClock").textContent = `${now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} 本地`;
+}
+
 function setEvidence(value) {
   state.evidence = value;
+  $("#activeLayerName").textContent = layerLabels[value] || value;
   document.querySelectorAll("[data-evidence]").forEach((item) => item.classList.toggle("active", item.dataset.evidence === value));
+  renderAll();
+}
+
+function renderAll() {
+  renderMetrics();
+  renderMap();
   renderIntel();
+  renderCases();
+  renderSources();
+  renderTimeline();
+  updateSelectedJurisdiction();
 }
 
 function attachEvents() {
@@ -395,9 +504,13 @@ function attachEvents() {
       state.range = button.dataset.range;
       document.querySelectorAll("[data-range]").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
-      renderMap();
-      renderIntel();
+      renderAll();
     });
+  });
+
+  $("#resetJurisdiction")?.addEventListener("click", () => {
+    state.selectedJurisdiction = null;
+    renderAll();
   });
 
   $("#closeDialog")?.addEventListener("click", () => $("#caseDialog").close());
@@ -417,23 +530,28 @@ function attachEvents() {
 }
 
 async function load() {
-  const [cases, organizations, documents, intel] = await Promise.all([
+  const [cases, organizations, documents, intel, sources] = await Promise.all([
     api("/api/cases"),
     api("/api/organizations"),
     api("/api/documents"),
     api("/api/intel?status=published"),
+    api("/api/source-health").catch(() => []),
   ]);
   state.cases = cases;
   state.organizations = organizations;
   state.documents = documents;
   state.intel = intel;
-  renderMetrics();
-  renderMap();
-  renderIntel();
-  renderCases();
+  state.sources = sources;
+  state.lastUpdated = new Date().toISOString();
+  renderAll();
 }
 
 attachEvents();
+updateClock();
+setInterval(updateClock, 1000);
 load().catch((error) => {
   document.body.innerHTML = `<main><h1>加载失败</h1><pre>${escapeHtml(error.message)}</pre></main>`;
 });
+setInterval(() => {
+  load().catch(() => {});
+}, state.refreshMs);
