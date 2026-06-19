@@ -97,6 +97,37 @@ MONITOR_NEWS_QUERIES = [
     },
 ]
 
+LEGISLATION_MONITORS = [
+    {
+        "id": "leg_eu_ai_act_gpai",
+        "query": 'domain:digital-strategy.ec.europa.eu "GPAI Code of Practice" copyright',
+        "jurisdiction": "European Union",
+        "priority": "P1",
+        "tags": "EU AI Act,GPAI,copyright,transparency,legislation",
+    },
+    {
+        "id": "leg_eu_tdm_optout",
+        "query": 'domain:eur-lex.europa.eu "text and data mining" copyright artificial intelligence',
+        "jurisdiction": "European Union",
+        "priority": "P1",
+        "tags": "TDM,opt-out,DSM Directive,AI training,legislation",
+    },
+    {
+        "id": "leg_fr_ai_copyright",
+        "query": 'domain:culture.gouv.fr "intelligence artificielle" "droit d\'auteur"',
+        "jurisdiction": "France",
+        "priority": "P1",
+        "tags": "France,AI,copyright,legislation",
+    },
+    {
+        "id": "leg_fr_parliament_ai_copyright",
+        "query": 'domain:assemblee-nationale.fr intelligence artificielle droit auteur',
+        "jurisdiction": "France",
+        "priority": "P1",
+        "tags": "France,Assemblée nationale,AI,copyright,legislation",
+    },
+]
+
 RIGHTS_HOLDER_MONITORS = [
     {
         "id": "rights_sacd",
@@ -171,6 +202,17 @@ NEWS_DOMAIN_ALLOWLIST = {
     "gema.de": "GEMA",
     "sgdl.org": "SGDL",
     "sne.fr": "SNE",
+    "eur-lex.europa.eu": "EUR-Lex",
+    "digital-strategy.ec.europa.eu": "European Commission",
+    "commission.europa.eu": "European Commission",
+    "europarl.europa.eu": "European Parliament",
+    "consilium.europa.eu": "Council of the European Union",
+    "culture.gouv.fr": "France Ministry of Culture",
+    "assemblee-nationale.fr": "Assemblée nationale",
+    "senat.fr": "Sénat",
+    "legifrance.gouv.fr": "Légifrance",
+    "arcom.fr": "Arcom",
+    "cnil.fr": "CNIL",
 }
 
 
@@ -227,17 +269,22 @@ def official_config_for(source_id):
     token = local_config.get("bearer_token") or token
     client_id = local_config.get("client_id") or os.environ.get(f"{source_config['config_key'].upper()}_CLIENT_ID", "")
     client_secret = local_config.get("client_secret") or os.environ.get(f"{source_config['config_key'].upper()}_CLIENT_SECRET", "")
+    key_id = local_config.get("key_id") or os.environ.get(f"{source_config['config_key'].upper()}_KEY_ID", "")
+    extra_headers = dict(local_config.get("headers", {}))
+    if key_id:
+        extra_headers.setdefault("KeyId", key_id)
     return {
         **source_config,
         "enabled": bool(local_config.get("enabled", True)),
         "search_url": local_config.get("search_url") or source_config["default_search_url"],
         "token_url": local_config.get("token_url", ""),
         "bearer_token": token,
+        "key_id": key_id,
         "client_id": client_id,
         "client_secret": client_secret,
         "scope": local_config.get("scope", "openid"),
         "auth_style": local_config.get("auth_style", "body"),
-        "extra_headers": local_config.get("headers", {}),
+        "extra_headers": extra_headers,
         "query_limit": int(local_config.get("query_limit", 5)),
     }
 
@@ -250,8 +297,9 @@ def official_source_status(conn):
         source = source_rows.get(source_id, {})
         needs_token = bool(runtime["credential_key"])
         has_direct_token = bool(runtime["bearer_token"])
+        has_key_id = bool(runtime["key_id"] or runtime["extra_headers"].get("KeyId"))
         has_oauth_credentials = bool(runtime["client_id"] and runtime["client_secret"] and runtime["token_url"])
-        configured = bool(runtime["search_url"]) and (not needs_token or has_direct_token or has_oauth_credentials)
+        configured = bool(runtime["search_url"]) and (not needs_token or has_direct_token or has_key_id or has_oauth_credentials)
         status_rows.append(
             {
                 "id": source_id,
@@ -1126,7 +1174,7 @@ def run_rights_holder_monitor(conn):
             for article in request_gdelt_articles(config["query"], max_records=8):
                 checked += 1
                 url = article.get("url") or ""
-                if not url:
+                if not url or not is_allowed_monitor_url(url):
                     continue
                 title = clean_text(article.get("title"))
                 if not title:
@@ -1158,6 +1206,48 @@ def run_rights_holder_monitor(conn):
         except Exception as exc:
             errors.append({"query": config["id"], "error": str(exc)[:240]})
     return {"source": "rights_holder_domains", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
+
+
+def run_legislation_monitor(conn):
+    inserted = 0
+    checked = 0
+    errors = []
+    for config in LEGISLATION_MONITORS:
+        try:
+            for article in request_gdelt_articles(config["query"], max_records=8):
+                checked += 1
+                url = article.get("url") or ""
+                if not url or not is_allowed_monitor_url(url):
+                    continue
+                title = clean_text(article.get("title"))
+                if not title:
+                    continue
+                source_name = source_name_for_url(url, "Public policy source")
+                card_id = f"intel_legislation_{stable_hash(config['id'], url)[:16]}"
+                before = conn.total_changes
+                insert_monitor_card(
+                    conn,
+                    {
+                        "id": card_id,
+                        "title": title,
+                        "summary": f"立法与政策动态监控命中“{config['query']}”。该信号可能影响 AI Act、GPAI 透明度、TDM opt-out 或法国版权立法执行，需后台审核。",
+                        "source_url": url,
+                        "source_name": source_name,
+                        "source_type": "policy_monitor",
+                        "jurisdiction": config["jurisdiction"],
+                        "priority": config["priority"],
+                        "signal_type": "legislation_update",
+                        "tags": config["tags"],
+                        "confidence": "media_lead" if source_name == "Public policy source" else "semi_official",
+                        "risk_delta": 5,
+                        "signal_date": gdelt_date_to_iso(article.get("seendate")),
+                    },
+                )
+                if conn.total_changes > before:
+                    inserted += 1
+        except Exception as exc:
+            errors.append({"query": config["id"], "error": str(exc)[:240]})
+    return {"source": "legislation_monitor", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
 
 
 def run_official_rss_monitor(conn):
@@ -1248,6 +1338,18 @@ def source_health(conn):
                 "document_count": 0,
                 "configured": True,
             },
+            {
+                "id": "source_legislation_monitor",
+                "name": "Legislation and policy monitor",
+                "source_type": "policy_monitor",
+                "jurisdiction": "Europe",
+                "base_url": "GDELT public index + EUR-Lex policy watch queries",
+                "refresh_cadence": "hourly",
+                "notes": "AI Act、GPAI Code、TDM opt-out 和法国 AI 版权立法动态发现层，命中后进入后台审核。",
+                "last_checked_at": row(conn, "SELECT MAX(started_at) AS last FROM monitor_runs WHERE notes LIKE '%legislation_monitor%'")["last"],
+                "document_count": 0,
+                "configured": True,
+            },
         ]
     )
     return health
@@ -1257,7 +1359,12 @@ def run_monitor():
     now = utc_now()
     with connect() as conn:
         source_rows = rows(conn, "SELECT * FROM sources ORDER BY name")
-        monitor_results = [run_gdelt_monitor(conn), run_rights_holder_monitor(conn), run_official_rss_monitor(conn)]
+        monitor_results = [
+            run_gdelt_monitor(conn),
+            run_rights_holder_monitor(conn),
+            run_legislation_monitor(conn),
+            run_official_rss_monitor(conn),
+        ]
         run_id = "run_" + now.replace(":", "").replace("+", "Z")
         inserted = sum(item.get("inserted_review_cards", 0) for item in monitor_results)
         conn.execute(
@@ -1357,8 +1464,8 @@ def run_judilibre_connector(conn):
     if not config["enabled"]:
         return {"source_id": "source_judilibre", "status": "skipped", "reason": "disabled"}
     token = fetch_oauth_application_token(config)
-    if not token:
-        return {"source_id": "source_judilibre", "status": "needs_credentials", "reason": "missing bearer token or OAuth client credentials"}
+    if not token and not config["extra_headers"].get("KeyId"):
+        return {"source_id": "source_judilibre", "status": "needs_credentials", "reason": "missing KeyId, bearer token or OAuth client credentials"}
     if not config["search_url"]:
         return {"source_id": "source_judilibre", "status": "needs_config", "reason": "missing search_url"}
 
@@ -1684,6 +1791,17 @@ class Handler(SimpleHTTPRequestHandler):
                     case_item["documents"] = rows(
                         conn,
                         "SELECT * FROM documents WHERE case_id = ? ORDER BY captured_at DESC, created_at DESC",
+                        (case_id,),
+                    )
+                    case_item["intelligence"] = rows(
+                        conn,
+                        """
+                        SELECT ic.*, o.name AS organization_name
+                        FROM intelligence_cards ic
+                        LEFT JOIN organizations o ON o.id = ic.organization_id
+                        WHERE ic.case_id = ? AND ic.status = 'published'
+                        ORDER BY COALESCE(ic.signal_date, ic.approved_at, ic.created_at) DESC, ic.priority
+                        """,
                         (case_id,),
                     )
                     return self.send_json(case_item)

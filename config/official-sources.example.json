@@ -2,6 +2,7 @@
   "judilibre": {
     "enabled": true,
     "search_url": "https://api.piste.gouv.fr/cassation/judilibre/v1.0/search",
+    "key_id": "PASTE_PISTE_KEY_ID_HERE",
     "bearer_token": "PASTE_PISTE_BEARER_TOKEN_HERE",
     "token_url": "PASTE_PISTE_OAUTH_TOKEN_URL_HERE",
     "client_id": "PASTE_PISTE_APPLICATION_CLIENT_ID_HERE",

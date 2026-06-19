@@ -16,10 +16,11 @@
 配置方式：
 
 1. 复制 `config/official-sources.example.json` 为 `config/official-sources.local.json`。
-2. 将 `judilibre.bearer_token` 改成 PISTE/Judilibre 授权 token。
-3. 如果 PISTE 给的是 application OAuth 凭证，而不是现成 bearer token，填写 `token_url`、`client_id`、`client_secret`、`scope`。不要把这些值提交到 Git。
-4. 如注册后台给出的 endpoint 与默认值不同，修改 `judilibre.search_url`。
-5. 在后台点击“运行官方文书抓取”，或请求 `POST /api/official-documents/run`。
+2. 如果 PISTE 后台给的是 `KeyId`，填写 `judilibre.key_id`；系统会自动以 `KeyId` 请求头发送。
+3. 如果 PISTE 给的是现成 bearer token，将 `judilibre.bearer_token` 改成授权 token。
+4. 如果 PISTE 给的是 application OAuth 凭证，而不是现成 bearer token，填写 `token_url`、`client_id`、`client_secret`、`scope`。不要把这些值提交到 Git。
+5. 如注册后台给出的 endpoint 与默认值不同，修改 `judilibre.search_url`。
+6. 在后台点击“运行官方文书抓取”，或请求 `POST /api/official-documents/run`。
 
 命中结果：
 
@@ -29,6 +30,7 @@
 认证方式：
 
 - 直接 token：填写 `bearer_token`。
+- PISTE KeyId：填写 `key_id`，或在 Render 环境变量里设置 `JUDILIBRE_KEY_ID`。
 - OAuth application flow：填写 `token_url`、`client_id`、`client_secret`。默认用 form body 发送 client 凭证；如果 PISTE 要求 HTTP Basic，把 `auth_style` 改为 `basic`。
 
 ## Légifrance

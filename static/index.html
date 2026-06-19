@@ -10,7 +10,7 @@
     <header class="monitor-topbar">
       <div>
         <p class="eyebrow">欧洲 AI 版权监控</p>
-        <h1>诉讼风险与证据流地图</h1>
+        <h1>诉讼、立法与权利人动态地图</h1>
       </div>
       <nav class="top-actions">
         <a class="nav-link" href="/admin.html">后台审核</a>
@@ -28,12 +28,16 @@
               <strong id="metricNews">0</strong>
             </button>
             <button data-evidence="official">
-              <span>官方诉讼文书</span>
+              <span>官方文书</span>
               <strong id="metricOfficial">0</strong>
             </button>
             <button data-evidence="rights">
-              <span>权利人集体发声</span>
+              <span>权利人发声</span>
               <strong id="metricRights">0</strong>
+            </button>
+            <button data-evidence="legislation">
+              <span>立法动态</span>
+              <strong id="metricLegislation">0</strong>
             </button>
           </div>
         </section>
@@ -67,13 +71,13 @@
           </div>
         </div>
 
-        <div class="nordic-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼风险地图"></div>
+        <div class="nordic-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼、立法与权利人动态地图"></div>
 
         <section class="case-ribbon">
           <div class="section-head">
             <div>
               <h2>诉讼与监控对象</h2>
-              <p>地图风险点合并展示案件数量、官方文书数量和情报信号。</p>
+              <p>点击案件查看新闻、官方文书、权利人发声和立法动态的聚合证据链。</p>
             </div>
           </div>
           <div class="case-grid" id="cases"></div>
@@ -96,6 +100,7 @@
           <button data-evidence="news" class="active">新闻</button>
           <button data-evidence="official">官方文书</button>
           <button data-evidence="rights">权利人发声</button>
+          <button data-evidence="legislation">立法动态</button>
         </div>
         <div id="intelCards" class="intel-feed"></div>
       </aside>

@@ -13,6 +13,7 @@ const signalTypeLabels = {
   law_firm_statement: "律所表态",
   rights_holder_statement: "权利人声明",
   official_court_document: "官方文件/法院文书",
+  legislation_update: "立法动态",
 };
 
 const jurisdictionLabels = {
@@ -44,6 +45,7 @@ const evidenceTitles = {
   news: "新闻有哪些",
   official: "官方诉讼文书有哪些",
   rights: "权利人机构是否集体发声",
+  legislation: "立法动态有哪些",
 };
 
 const jurisdictions = [
@@ -65,8 +67,25 @@ async function api(path, options) {
   return response.json();
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[char]);
+}
+
+function safeUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "#";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return "#";
+}
+
 function priorityBadge(priority) {
-  return `<span class="badge ${priority}">${priority}</span>`;
+  return `<span class="badge ${escapeHtml(priority)}">${escapeHtml(priority)}</span>`;
 }
 
 function formatDate(value) {
@@ -76,19 +95,17 @@ function formatDate(value) {
   return date.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
+function sortDate(item) {
+  return item.sort_date || item.signal_date || item.document_date || item.captured_at || item.approved_at || item.created_at || 0;
+}
+
 function sortByTimeDesc(items) {
-  return [...items].sort((a, b) => {
-    const left = new Date(a.sort_date || a.signal_date || a.document_date || a.approved_at || a.created_at || 0).getTime();
-    const right = new Date(b.sort_date || b.signal_date || b.document_date || b.approved_at || b.created_at || 0).getTime();
-    return right - left;
-  });
+  return [...items].sort((a, b) => new Date(sortDate(b)).getTime() - new Date(sortDate(a)).getTime());
 }
 
 function inRange(item) {
   if (state.range === "all") return true;
-  const raw = item.sort_date || item.signal_date || item.document_date || item.approved_at || item.created_at;
-  if (!raw) return true;
-  const time = new Date(raw).getTime();
+  const time = new Date(sortDate(item)).getTime();
   if (Number.isNaN(time)) return true;
   const days = state.range === "7d" ? 7 : 30;
   return Date.now() - time <= days * 24 * 60 * 60 * 1000;
@@ -98,17 +115,37 @@ function orgById(id) {
   return state.organizations.find((item) => item.id === id);
 }
 
+function signalHaystack(item) {
+  return `${item.tags || ""} ${item.title || ""} ${item.summary || ""} ${item.source_name || ""}`.toLowerCase();
+}
+
 function isRightsVoice(item) {
   const org = orgById(item.organization_id);
-  const tags = `${item.tags || ""} ${item.title || ""} ${item.summary || ""}`.toLowerCase();
+  const haystack = signalHaystack(item);
   return (
     item.signal_type === "rights_holder_statement" ||
     item.signal_type === "law_firm_statement" ||
-    ["rights_org", "cmo", "industry_org"].includes(org?.category) ||
-    tags.includes("sacd") ||
-    tags.includes("gema") ||
-    tags.includes("sgdl") ||
-    tags.includes("sne")
+    ["rights_org", "cmo", "industry_org", "publisher"].includes(org?.category) ||
+    haystack.includes("sacd") ||
+    haystack.includes("figaro") ||
+    haystack.includes("gema") ||
+    haystack.includes("sgdl") ||
+    haystack.includes("sne")
+  );
+}
+
+function isLegislationSignal(item) {
+  const haystack = signalHaystack(item);
+  return (
+    item.signal_type === "legislation_update" ||
+    haystack.includes("ai act") ||
+    haystack.includes("gpai") ||
+    haystack.includes("tdm") ||
+    haystack.includes("text and data mining") ||
+    haystack.includes("opt-out") ||
+    haystack.includes("eur-lex") ||
+    haystack.includes("legislation") ||
+    haystack.includes("proposition de loi")
   );
 }
 
@@ -124,27 +161,31 @@ function caseForJurisdiction(name) {
   return state.cases.filter((item) => item.jurisdiction === name);
 }
 
+function getOfficialEvidence() {
+  const documentItems = state.documents.map((doc) => ({
+    ...doc,
+    evidence_kind: "official",
+    priority: doc.confidence === "official" ? "P1" : "P2",
+    signal_type: "official_court_document",
+    sort_date: doc.document_date || doc.captured_at || doc.created_at,
+    source_name: doc.source_id || "官方文书源",
+    summary: doc.summary_cn || doc.extracted_text || "官方来源已归档，等待进一步摘要。",
+  }));
+  const officialIntel = state.intel
+    .filter((item) => item.signal_type === "official_court_document")
+    .map((item) => ({ ...item, evidence_kind: "official", sort_date: item.signal_date || item.approved_at || item.created_at }));
+  return sortByTimeDesc([...officialIntel, ...documentItems]).filter(inRange);
+}
+
 function getEvidenceItems() {
-  if (state.evidence === "official") {
-    const documentItems = state.documents.map((doc) => ({
-      ...doc,
-      evidence_kind: "official",
-      priority: doc.confidence === "official" ? "P1" : "P2",
-      signal_type: "official_court_document",
-      sort_date: doc.document_date || doc.captured_at || doc.created_at,
-      source_name: doc.source_id || "官方文书源",
-      summary: doc.summary_cn || doc.extracted_text || "官方来源已归档，等待进一步摘要。",
-    }));
-    const officialIntel = state.intel
-      .filter((item) => item.signal_type === "official_court_document")
-      .map((item) => ({ ...item, evidence_kind: "official", sort_date: item.signal_date || item.approved_at || item.created_at }));
-    return sortByTimeDesc([...officialIntel, ...documentItems]).filter(inRange);
-  }
+  if (state.evidence === "official") return getOfficialEvidence();
 
   const filtered = state.intel.filter((item) => {
     if (state.evidence === "news") return item.signal_type === "news";
-    return isRightsVoice(item);
+    if (state.evidence === "rights") return isRightsVoice(item);
+    return isLegislationSignal(item);
   });
+
   return sortByTimeDesc(filtered.map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at }))).filter(inRange);
 }
 
@@ -152,32 +193,38 @@ function renderMetrics() {
   const news = state.intel.filter((item) => item.signal_type === "news").length;
   const official = state.documents.length + state.intel.filter((item) => item.signal_type === "official_court_document").length;
   const rights = state.intel.filter(isRightsVoice).length;
+  const legislation = state.intel.filter(isLegislationSignal).length;
+
   $("#metricNews").textContent = news;
   $("#metricOfficial").textContent = official;
   $("#metricRights").textContent = rights;
+  $("#metricLegislation").textContent = legislation;
 
   $("#metrics").innerHTML = [
     ["案件", state.cases.length],
     ["新闻", news],
     ["官方文书", official],
     ["权利人发声", rights],
+    ["立法动态", legislation],
   ]
-    .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`)
+    .map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${value}</strong></article>`)
     .join("");
 }
 
 function renderMap() {
   const points = jurisdictions
     .map((item) => {
-      const intelCount = intelForJurisdiction(item.name).length;
+      const intelItems = intelForJurisdiction(item.name);
       const caseCount = caseForJurisdiction(item.name).length;
       const docCount = docsForJurisdiction(item.name).length;
+      const intelCount = intelItems.length;
+      const legislationCount = intelItems.filter(isLegislationSignal).length;
       if (caseCount + intelCount + docCount === 0 && item.priority !== "P0") return "";
-      const intensity = Math.min(100, item.score + intelCount * 4 + docCount * 6);
+      const intensity = Math.min(100, item.score + intelCount * 4 + docCount * 6 + legislationCount * 3);
       return `
-        <button class="map-point ${item.priority}" style="left:${item.x}%; top:${item.y}%;" data-jurisdiction="${item.name}">
-          <span>${item.label}</span>
-          <strong>${item.priority}</strong>
+        <button class="map-point ${escapeHtml(item.priority)}" style="left:${item.x}%; top:${item.y}%;" data-jurisdiction="${escapeHtml(item.name)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.priority)}</strong>
           <em>${caseCount} 案件 · ${docCount} 文书 · ${intelCount} 情报</em>
           <i style="width:${intensity}%"></i>
         </button>
@@ -201,52 +248,51 @@ function renderIntel() {
   $("#evidenceTitle").textContent = evidenceTitles[state.evidence];
   const cards = getEvidenceItems().filter((item) => state.filter === "all" || item.priority === state.filter);
   target.innerHTML = cards.length
-    ? cards
-        .map((item) => {
-          const title = item.title;
-          const summary = item.summary || item.summary_cn || "暂无摘要。";
-          const sourceName = item.source_name || item.source_id || "来源待确认";
-          const url = item.source_url || "#";
-          const jurisdiction = jurisdictionLabels[item.jurisdiction] || item.jurisdiction || "未知法域";
-          const date = formatDate(item.sort_date || item.signal_date || item.document_date || item.created_at);
-          return `
-            <article class="intel-feed-card ${state.evidence}">
-              <div class="case-meta">
-                ${priorityBadge(item.priority || "P2")}
-                <span class="pill type-pill">${signalTypeLabels[item.signal_type] || "官方文书"}</span>
-                <span class="pill">${confidenceLabels[item.confidence] || item.confidence || "官方"}</span>
-              </div>
-              <h3>${title}</h3>
-              <p>${summary}</p>
-              <div class="meta-list">
-                <span>日期：${date}</span>
-                <span>法域：${jurisdiction}</span>
-              </div>
-              <div class="intel-foot">
-                <span>${sourceName}</span>
-                ${url === "#" ? "<span>已归档</span>" : `<a href="${url}" target="_blank" rel="noreferrer">来源</a>`}
-              </div>
-            </article>
-          `;
-        })
-        .join("")
+    ? cards.map(renderIntelCard).join("")
     : `<div class="empty-state">当前筛选条件下没有证据卡片。</div>`;
+}
+
+function renderIntelCard(item) {
+  const sourceUrl = safeUrl(item.source_url);
+  const sourceName = item.source_name || item.source_id || "来源待确认";
+  const jurisdiction = jurisdictionLabels[item.jurisdiction] || item.jurisdiction || "未知法域";
+  const signalType = signalTypeLabels[item.signal_type] || "情报";
+  const date = formatDate(sortDate(item));
+  return `
+    <article class="intel-feed-card ${escapeHtml(state.evidence)}">
+      <div class="case-meta">
+        ${priorityBadge(item.priority || "P2")}
+        <span class="pill type-pill">${escapeHtml(signalType)}</span>
+        <span class="pill">${escapeHtml(confidenceLabels[item.confidence] || item.confidence || "待确认")}</span>
+      </div>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.summary || item.summary_cn || "暂无摘要。")}</p>
+      <div class="meta-list">
+        <span>日期：${escapeHtml(date)}</span>
+        <span>法域：${escapeHtml(jurisdiction)}</span>
+      </div>
+      <div class="intel-foot">
+        <span>${escapeHtml(sourceName)}</span>
+        ${sourceUrl === "#" ? "<span>已归档</span>" : `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">来源</a>`}
+      </div>
+    </article>
+  `;
 }
 
 function renderCases() {
   $("#cases").innerHTML = state.cases
     .map(
       (item) => `
-        <article class="case-card" data-case-id="${item.id}">
+        <article class="case-card" data-case-id="${escapeHtml(item.id)}">
           <div class="case-meta">
             ${priorityBadge(item.priority)}
-            <span class="pill">${statusLabels[item.status] || item.status}</span>
-            <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
-            <span class="pill">${item.document_count} 文书</span>
+            <span class="pill">${escapeHtml(statusLabels[item.status] || item.status)}</span>
+            <span class="pill">${escapeHtml(jurisdictionLabels[item.jurisdiction] || item.jurisdiction)}</span>
+            <span class="pill">${Number(item.document_count || 0)} 文书</span>
           </div>
-          <h3>${item.title}</h3>
-          <p>${item.summary}</p>
-          <div class="risk-bar"><span style="width:${item.risk_score}%"></span></div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.summary)}</p>
+          <div class="risk-bar"><span style="width:${Number(item.risk_score || 0)}%"></span></div>
         </article>
       `
     )
@@ -257,28 +303,68 @@ function renderCases() {
   });
 }
 
+function renderCaseEvidence(item) {
+  const documentEvidence = (item.documents || []).map((doc) => ({
+    title: doc.title,
+    summary: doc.summary_cn || doc.extracted_text || "官方文书已归档。",
+    source_name: doc.source_id || "官方文书",
+    source_url: doc.source_url,
+    priority: doc.confidence === "official" ? "P1" : "P2",
+    signal_type: "official_court_document",
+    confidence: doc.confidence,
+    sort_date: doc.document_date || doc.captured_at || doc.created_at,
+  }));
+  const intelEvidence = (item.intelligence || []).map((card) => ({
+    ...card,
+    sort_date: card.signal_date || card.approved_at || card.created_at,
+  }));
+  const timeline = sortByTimeDesc([...documentEvidence, ...intelEvidence]);
+  if (!timeline.length) return `<div class="empty-state">这个监控对象暂时还没有可展示的证据链。</div>`;
+  return timeline
+    .map((entry) => {
+      const sourceUrl = safeUrl(entry.source_url);
+      const signalType = signalTypeLabels[entry.signal_type] || "情报";
+      return `
+        <article class="case-evidence">
+          <div class="case-meta">
+            ${priorityBadge(entry.priority || "P2")}
+            <span class="pill type-pill">${escapeHtml(signalType)}</span>
+            <span class="pill">${escapeHtml(formatDate(sortDate(entry)))}</span>
+          </div>
+          <h4>${escapeHtml(entry.title)}</h4>
+          <p>${escapeHtml(entry.summary || "暂无摘要。")}</p>
+          <div class="intel-foot">
+            <span>${escapeHtml(entry.source_name || "来源待确认")}</span>
+            ${sourceUrl === "#" ? "<span>已归档</span>" : `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">打开来源</a>`}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 async function showCase(caseId) {
-  const item = await api(`/api/cases/${caseId}`);
+  const item = await api(`/api/cases/${encodeURIComponent(caseId)}`);
   $("#caseDetail").innerHTML = `
     <div class="case-meta">
       ${priorityBadge(item.priority)}
-      <span class="pill">${statusLabels[item.status] || item.status}</span>
-      <span class="pill">${item.procedural_stage}</span>
-      <span class="pill">风险 ${item.risk_score}</span>
+      <span class="pill">${escapeHtml(statusLabels[item.status] || item.status)}</span>
+      <span class="pill">${escapeHtml(item.procedural_stage)}</span>
+      <span class="pill">风险 ${Number(item.risk_score || 0)}</span>
     </div>
-    <h2>${item.title}</h2>
-    <p>${item.summary}</p>
+    <h2>${escapeHtml(item.title)}</h2>
+    <p>${escapeHtml(item.summary)}</p>
     <div class="detail-block">
       <h3>法院与标识</h3>
-      <p>${item.court || "待确认"} · ${item.case_number || "无案号"} · ${item.ecli || "无 ECLI"}</p>
+      <p>${escapeHtml(item.court || "待确认")} · ${escapeHtml(item.case_number || "无案号")} · ${escapeHtml(item.ecli || "无 ECLI")}</p>
     </div>
     <div class="detail-block">
       <h3>权利主体</h3>
-      <p>${item.organizations.map((org) => `${org.name} (${org.role})`).join(", ") || "未绑定"}</p>
+      <p>${escapeHtml((item.organizations || []).map((org) => `${org.name} (${org.role})`).join(", ") || "未绑定")}</p>
     </div>
     <div class="detail-block">
-      <h3>官方文书</h3>
-      <p>${item.documents.length ? item.documents.map((doc) => doc.title).join(", ") : "暂无案件文书，保持监控。"}</p>
+      <h3>聚合证据链</h3>
+      <div class="case-evidence-list">${renderCaseEvidence(item)}</div>
     </div>
   `;
   $("#caseDialog").showModal();
@@ -320,10 +406,13 @@ function attachEvents() {
     const button = $("#runMonitor");
     button.disabled = true;
     button.textContent = "监控中";
-    await api("/api/monitor/run", { method: "POST" });
-    await load();
-    button.disabled = false;
-    button.textContent = "运行监控";
+    try {
+      await api("/api/monitor/run", { method: "POST" });
+      await load();
+    } finally {
+      button.disabled = false;
+      button.textContent = "运行监控";
+    }
   });
 }
 
@@ -346,5 +435,5 @@ async function load() {
 
 attachEvents();
 load().catch((error) => {
-  document.body.innerHTML = `<main><h1>加载失败</h1><pre>${error.message}</pre></main>`;
+  document.body.innerHTML = `<main><h1>加载失败</h1><pre>${escapeHtml(error.message)}</pre></main>`;
 });

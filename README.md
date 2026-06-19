@@ -68,6 +68,7 @@ The repository includes:
 - `law_firm_statement`: 律所表态
 - `rights_holder_statement`: 权利人声明
 - `official_court_document`: 官方法院文件
+- `legislation_update`: 立法动态
 
 `POST /api/documents/capture` downloads an official document URL, stores the raw payload under `data/raw`, calculates a SHA-256 hash, and inserts a document row.
 

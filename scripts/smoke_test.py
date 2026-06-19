@@ -40,8 +40,10 @@ def main():
     assert any(item["name"] == "Le Figaro / Groupe Figaro" and item["priority"] == "P0" for item in organizations)
     assert any(item["signal_type"] == "news" for item in intel)
     assert any(item["signal_type"] == "official_court_document" for item in intel)
+    assert any(item["signal_type"] == "legislation_update" or "AI Act" in item["tags"] for item in intel)
     assert any(item["signal_type"] in {"news", "rights_holder_statement"} for item in admin_intel)
     assert sacd["priority"] == "P0"
+    assert "intelligence" in sacd
     assert run["status"] == "completed"
 
     print("smoke ok")
