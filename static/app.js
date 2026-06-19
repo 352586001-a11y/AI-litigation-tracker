@@ -5,7 +5,7 @@ const state = {
   intel: [],
   sources: [],
   filter: "all",
-  evidence: "news",
+  evidence: "litigation",
   range: "all",
   selectedJurisdiction: null,
   lastUpdated: null,
@@ -21,7 +21,7 @@ const signalTypeLabels = {
 };
 
 const layerLabels = {
-  news: "新闻层",
+  litigation: "诉讼层",
   official: "官方文书层",
   rights: "权利人发声层",
   legislation: "立法动态层",
@@ -53,11 +53,74 @@ const confidenceLabels = {
 };
 
 const evidenceTitles = {
-  news: "新闻有哪些",
+  litigation: "诉讼动态有哪些",
   official: "官方诉讼文书有哪些",
-  rights: "权利人机构是否集体发声",
+  rights: "权利人官方声明与表态",
   legislation: "立法动态有哪些",
 };
+
+const litigationKeywords = [
+  "lawsuit",
+  "sue",
+  "sued",
+  "sues",
+  "court",
+  "tribunal",
+  "judgment",
+  "ruling",
+  "damages",
+  "injunction",
+  "appeal",
+  "complaint",
+  "claim",
+  "case",
+  " v. ",
+  " v ",
+  "procès",
+  "plainte",
+  "tribunal judiciaire",
+  "cour",
+  "klage",
+  "gericht",
+  "起诉",
+  "法院",
+  "判决",
+  "裁定",
+  "赔偿",
+  "禁令",
+];
+
+const rightsStatementKeywords = [
+  "statement",
+  "position",
+  "declaration",
+  "déclaration",
+  "calls",
+  "urges",
+  "demands",
+  "open letter",
+  "licensing",
+  "license",
+  "opt-out",
+  "remuneration",
+  "compensation",
+  "creator",
+  "authors",
+  "publishers",
+  "声明",
+  "表态",
+  "立场",
+  "呼吁",
+  "要求",
+  "授权",
+  "许可",
+  "报酬",
+  "补偿",
+  "创作者",
+  "作者",
+  "出版商",
+  "集体",
+];
 
 const jurisdictions = [
   { id: "fr", name: "France", label: "法国", priority: "P0", score: 97, x: 42, y: 58 },
@@ -95,6 +158,14 @@ function safeUrl(value) {
 
 function priorityBadge(priority) {
   return `<span class="badge ${escapeHtml(priority)}">${escapeHtml(priority)}</span>`;
+}
+
+function displaySignalType(item) {
+  if (isOfficialDocumentSignal(item)) return "官方文书";
+  if (isLitigationSignal(item)) return "诉讼动态";
+  if (isRightsVoice(item)) return "权利人发声";
+  if (isLegislationSignal(item)) return "立法动态";
+  return signalTypeLabels[item.signal_type] || "情报";
 }
 
 function formatDate(value) {
@@ -135,26 +206,49 @@ function orgById(id) {
   return state.organizations.find((item) => item.id === id);
 }
 
+function caseById(id) {
+  return state.cases.find((item) => item.id === id);
+}
+
 function signalHaystack(item) {
   return `${item.tags || ""} ${item.title || ""} ${item.summary || ""} ${item.source_name || ""}`.toLowerCase();
 }
 
+function hasAnyKeyword(haystack, keywords) {
+  return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
+}
+
+function hasLitigationCase(item) {
+  const relatedCase = caseById(item.case_id);
+  return Boolean(relatedCase && ["CASE", "LEAD"].includes(relatedCase.status));
+}
+
+function isOfficialDocumentSignal(item) {
+  return item.signal_type === "official_court_document" || item.evidence_kind === "official";
+}
+
+function isLitigationSignal(item) {
+  if (isOfficialDocumentSignal(item)) return false;
+  if (hasLitigationCase(item)) return true;
+  if (isLegislationSignal(item)) return false;
+  return hasAnyKeyword(signalHaystack(item), litigationKeywords);
+}
+
 function isRightsVoice(item) {
+  if (isOfficialDocumentSignal(item) || isLegislationSignal(item) || isLitigationSignal(item)) return false;
   const org = orgById(item.organization_id);
   const haystack = signalHaystack(item);
+  const isRightsOrganization = ["rights_org", "cmo", "industry_org", "publisher"].includes(org?.category);
+  const isOfficialSource = ["official_site", "publisher_site"].includes(item.source_type);
   return (
     item.signal_type === "rights_holder_statement" ||
-    item.signal_type === "law_firm_statement" ||
-    ["rights_org", "cmo", "industry_org", "publisher"].includes(org?.category) ||
-    haystack.includes("sacd") ||
-    haystack.includes("figaro") ||
-    haystack.includes("gema") ||
-    haystack.includes("sgdl") ||
-    haystack.includes("sne")
+    ((isRightsOrganization || isOfficialSource) && hasAnyKeyword(haystack, rightsStatementKeywords))
   );
 }
 
 function isLegislationSignal(item) {
+  if (isOfficialDocumentSignal(item)) return false;
+  if (hasLitigationCase(item)) return false;
   const haystack = signalHaystack(item);
   return (
     item.signal_type === "legislation_update" ||
@@ -162,7 +256,6 @@ function isLegislationSignal(item) {
     haystack.includes("gpai") ||
     haystack.includes("tdm") ||
     haystack.includes("text and data mining") ||
-    haystack.includes("opt-out") ||
     haystack.includes("eur-lex") ||
     haystack.includes("legislation") ||
     haystack.includes("proposition de loi")
@@ -201,7 +294,7 @@ function getEvidenceItems(layer = state.evidence) {
   if (layer === "official") return getOfficialEvidence();
 
   const filtered = state.intel.filter((item) => {
-    if (layer === "news") return item.signal_type === "news";
+    if (layer === "litigation") return isLitigationSignal(item);
     if (layer === "rights") return isRightsVoice(item);
     return isLegislationSignal(item);
   });
@@ -226,12 +319,12 @@ function getAllSignals() {
 }
 
 function renderMetrics() {
-  const news = state.intel.filter((item) => item.signal_type === "news").length;
+  const litigation = state.intel.filter(isLitigationSignal).length;
   const official = state.documents.length + state.intel.filter((item) => item.signal_type === "official_court_document").length;
   const rights = state.intel.filter(isRightsVoice).length;
   const legislation = state.intel.filter(isLegislationSignal).length;
 
-  $("#metricNews").textContent = news;
+  $("#metricNews").textContent = litigation;
   $("#metricOfficial").textContent = official;
   $("#metricRights").textContent = rights;
   $("#metricLegislation").textContent = legislation;
@@ -306,7 +399,7 @@ function renderIntelCard(item) {
   const sourceUrl = safeUrl(item.source_url);
   const sourceName = item.source_name || item.source_id || "来源待确认";
   const jurisdiction = jurisdictionLabels[item.jurisdiction] || item.jurisdiction || "未知法域";
-  const signalType = signalTypeLabels[item.signal_type] || "情报";
+  const signalType = displaySignalType(item);
   const date = formatDate(sortDate(item));
   return `
     <article class="wm-intel-card ${escapeHtml(item.priority || "P2")}">
@@ -379,7 +472,7 @@ function renderTimeline() {
   const signals = getAllSignals().filter(inSelectedJurisdiction).slice(0, 14);
   target.innerHTML = signals
     .map((item) => {
-      const signalType = signalTypeLabels[item.signal_type] || "情报";
+      const signalType = displaySignalType(item);
       return `
         <button class="wm-timeline-item ${escapeHtml(item.priority || "P2")}" title="${escapeHtml(item.title)}">
           <span>${escapeHtml(formatDate(sortDate(item)))}</span>
@@ -411,7 +504,7 @@ function renderCaseEvidence(item) {
   return timeline
     .map((entry) => {
       const sourceUrl = safeUrl(entry.source_url);
-      const signalType = signalTypeLabels[entry.signal_type] || "情报";
+      const signalType = displaySignalType(entry);
       return `
         <article class="case-evidence">
           <div class="case-meta">
