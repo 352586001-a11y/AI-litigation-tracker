@@ -8,6 +8,7 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from html import unescape
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -128,6 +129,29 @@ RIGHTS_HOLDER_MONITORS = [
         "jurisdiction": "France",
         "priority": "P1",
         "tags": "SGDL,SNE,Meta,Llama,rights-holder",
+    },
+]
+
+OFFICIAL_RSS_SOURCES = [
+    {
+        "id": "rss_curia_press",
+        "name": "CURIA / CJEU RSS",
+        "url": "http://curia.europa.eu/site/rss.jsp?lang=en&secondLang=fr",
+        "jurisdiction": "European Union",
+        "priority": "P1",
+        "source_name": "CURIA / CJEU",
+        "tags": "CURIA,CJEU,EU court,official",
+        "keywords": ["copyright", "intellectual property", "artificial intelligence", "data mining", "database", "authors", "publishers"],
+    },
+    {
+        "id": "rss_echr_news",
+        "name": "ECHR RSS",
+        "url": "https://www.echr.coe.int/rss",
+        "jurisdiction": "Council of Europe",
+        "priority": "P3",
+        "source_name": "ECHR",
+        "tags": "ECHR,official,property,expression",
+        "keywords": ["copyright", "intellectual property", "property", "expression", "artificial intelligence"],
     },
 ]
 
@@ -264,6 +288,12 @@ def request_json(url, token="", headers=None, payload=None, timeout=30):
     req = Request(url, data=data, headers=request_headers, method=method)
     with urlopen(req, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8", errors="replace"))
+
+
+def request_text(url, timeout=8):
+    req = Request(url, headers={"User-Agent": "AI-Copyright-Risk-Tracker/0.1"})
+    with urlopen(req, timeout=timeout) as response:
+        return response.read().decode("utf-8", errors="replace")
 
 
 def fetch_oauth_application_token(config):
@@ -951,6 +981,18 @@ def clean_text(value):
     return " ".join(unescape(str(value or "")).split())
 
 
+def rss_date_to_iso(value):
+    if not value:
+        return utc_now()
+    try:
+        parsed = parsedate_to_datetime(value)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+    except Exception:
+        return utc_now()
+
+
 def source_name_for_url(url, fallback="GDELT"):
     host = urlparse(url or "").netloc.lower().replace("www.", "")
     for domain, name in NEWS_DOMAIN_ALLOWLIST.items():
@@ -980,6 +1022,23 @@ def request_gdelt_articles(query, max_records=6):
     except Exception:
         return []
     return payload.get("articles", []) if isinstance(payload, dict) else []
+
+
+def request_rss_items(url):
+    try:
+        raw = request_text(url, timeout=8)
+        root = ET.fromstring(raw)
+    except Exception:
+        return []
+    items = []
+    for item in root.findall(".//item"):
+        title = clean_text(item.findtext("title"))
+        link = clean_text(item.findtext("link"))
+        description = clean_text(item.findtext("description"))
+        pub_date = clean_text(item.findtext("pubDate") or item.findtext("date"))
+        if title and link:
+            items.append({"title": title, "url": link, "description": description, "date": rss_date_to_iso(pub_date)})
+    return items
 
 
 def insert_monitor_card(conn, card):
@@ -1101,6 +1160,44 @@ def run_rights_holder_monitor(conn):
     return {"source": "rights_holder_domains", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
 
 
+def run_official_rss_monitor(conn):
+    inserted = 0
+    checked = 0
+    errors = []
+    for source in OFFICIAL_RSS_SOURCES:
+        try:
+            for item in request_rss_items(source["url"])[:12]:
+                checked += 1
+                haystack = f"{item['title']} {item.get('description', '')}".lower()
+                if not any(keyword.lower() in haystack for keyword in source["keywords"]):
+                    continue
+                card_id = f"intel_rss_{stable_hash(source['id'], item['url'])[:16]}"
+                before = conn.total_changes
+                insert_monitor_card(
+                    conn,
+                    {
+                        "id": card_id,
+                        "title": item["title"],
+                        "summary": item.get("description") or f"{source['name']} 官方 RSS 命中版权/AI/知识产权相关关键词，需后台审核。",
+                        "source_url": item["url"],
+                        "source_name": source["source_name"],
+                        "source_type": "official_portal",
+                        "jurisdiction": source["jurisdiction"],
+                        "priority": source["priority"],
+                        "signal_type": "official_court_document",
+                        "tags": source["tags"],
+                        "confidence": "official",
+                        "risk_delta": 5,
+                        "signal_date": item["date"],
+                    },
+                )
+                if conn.total_changes > before:
+                    inserted += 1
+        except Exception as exc:
+            errors.append({"source": source["id"], "error": str(exc)[:240]})
+    return {"source": "official_rss", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
+
+
 def source_health(conn):
     items = rows(conn, "SELECT * FROM sources ORDER BY jurisdiction, name")
     health = []
@@ -1139,6 +1236,18 @@ def source_health(conn):
                 "document_count": 0,
                 "configured": True,
             },
+            {
+                "id": "source_official_rss",
+                "name": "Official RSS monitor",
+                "source_type": "official_rss",
+                "jurisdiction": "Europe",
+                "base_url": ", ".join(source["url"] for source in OFFICIAL_RSS_SOURCES),
+                "refresh_cadence": "hourly",
+                "notes": "无需密钥的官方 RSS 监控层。当前包含 CURIA/CJEU 和 ECHR，命中后进入后台审核。",
+                "last_checked_at": row(conn, "SELECT MAX(started_at) AS last FROM monitor_runs WHERE notes LIKE '%official_rss%'")["last"],
+                "document_count": 0,
+                "configured": True,
+            },
         ]
     )
     return health
@@ -1148,7 +1257,7 @@ def run_monitor():
     now = utc_now()
     with connect() as conn:
         source_rows = rows(conn, "SELECT * FROM sources ORDER BY name")
-        monitor_results = [run_gdelt_monitor(conn), run_rights_holder_monitor(conn)]
+        monitor_results = [run_gdelt_monitor(conn), run_rights_holder_monitor(conn), run_official_rss_monitor(conn)]
         run_id = "run_" + now.replace(":", "").replace("+", "Z")
         inserted = sum(item.get("inserted_review_cards", 0) for item in monitor_results)
         conn.execute(

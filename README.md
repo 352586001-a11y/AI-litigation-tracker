@@ -53,6 +53,7 @@ The monitor loop currently runs every 60 minutes.
 ## Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md).
+See [Data Sources](docs/data-sources.md) for the configured monitoring sources and credential-gated sources.
 
 The repository includes:
 
