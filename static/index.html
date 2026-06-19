@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>欧洲 AI 版权态势监控</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-live3" />
   </head>
   <body class="monitor-world">
     <div class="wm-shell">
@@ -20,10 +20,12 @@
           <span id="systemClock">--:-- UTC</span>
           <span id="activeJurisdiction">全欧洲视图</span>
           <span id="activeLayerName">诉讼层</span>
+          <span id="refreshStatus">同步中</span>
+          <span id="sourceCoverage">源 0/0</span>
         </div>
         <nav class="wm-actions">
           <a href="/admin.html">后台审核</a>
-          <button id="runMonitor">运行监控</button>
+          <button id="runMonitor">立即同步</button>
         </nav>
       </header>
 
@@ -98,6 +100,20 @@
           </div>
 
           <div class="wm-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼、立法与权利人动态地图"></div>
+          <div class="wm-live-console">
+            <div>
+              <span>LIVE FEED</span>
+              <strong id="liveHeadline">等待情报同步</strong>
+            </div>
+            <div>
+              <span>WINDOW</span>
+              <strong id="liveWindow">全部时间</strong>
+            </div>
+            <div>
+              <span>RECENT</span>
+              <strong id="recentSignalCount">0 条 / 30 天</strong>
+            </div>
+          </div>
         </section>
 
         <section class="wm-case-dock">
@@ -112,7 +128,7 @@
       <aside class="wm-right-dock">
         <div class="wm-intel-head">
           <div>
-            <p>按时间倒序</p>
+            <p>实时简报 · 新到旧</p>
             <h2 id="evidenceTitle">诉讼动态有哪些</h2>
           </div>
           <div class="filters wm-priority-filter">
@@ -144,6 +160,6 @@
       <div id="caseDetail"></div>
     </dialog>
 
-    <script src="/app.js"></script>
+    <script src="/app.js?v=20260620-live3"></script>
   </body>
 </html>

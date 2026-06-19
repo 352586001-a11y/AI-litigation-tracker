@@ -10,6 +10,7 @@ const state = {
   selectedJurisdiction: null,
   lastUpdated: null,
   refreshMs: 60000,
+  nextRefreshAt: null,
 };
 
 const signalTypeLabels = {
@@ -32,6 +33,7 @@ const jurisdictionLabels = {
   Germany: "德国",
   "European Union": "欧盟",
   "United Kingdom": "英国",
+  Denmark: "丹麦",
   Netherlands: "荷兰",
   Spain: "西班牙",
   Italy: "意大利",
@@ -50,6 +52,19 @@ const confidenceLabels = {
   official: "官方",
   semi_official: "半官方",
   media_lead: "媒体线索",
+};
+
+const sourceTypeLabels = {
+  official_api: "官方 API",
+  official_portal: "官方门户",
+  official_database: "官方库",
+  official_site: "官网",
+  publisher_site: "出版方",
+  law_firm_tracker: "法律跟踪器",
+  news_index: "新闻索引",
+  rights_holder_monitor: "权利人监控",
+  official_rss: "官方 RSS",
+  policy_monitor: "政策监控",
 };
 
 const evidenceTitles = {
@@ -123,13 +138,14 @@ const rightsStatementKeywords = [
 ];
 
 const jurisdictions = [
-  { id: "fr", name: "France", label: "法国", priority: "P0", score: 97, x: 42, y: 58 },
-  { id: "eu", name: "European Union", label: "欧盟", priority: "P1", score: 84, x: 59, y: 43 },
-  { id: "de", name: "Germany", label: "德国", priority: "P1", score: 78, x: 54, y: 42 },
-  { id: "uk", name: "United Kingdom", label: "英国", priority: "P2", score: 70, x: 31, y: 38 },
+  { id: "fr", name: "France", label: "法国", priority: "P0", score: 97, x: 40, y: 60 },
+  { id: "eu", name: "European Union", label: "欧盟", priority: "P1", score: 84, x: 76, y: 38 },
+  { id: "de", name: "Germany", label: "德国", priority: "P1", score: 78, x: 59, y: 55 },
+  { id: "uk", name: "United Kingdom", label: "英国", priority: "P2", score: 70, x: 30, y: 41 },
+  { id: "dk", name: "Denmark", label: "丹麦", priority: "P1", score: 72, x: 53, y: 24 },
   { id: "nl", name: "Netherlands", label: "荷兰", priority: "P2", score: 61, x: 48, y: 36 },
   { id: "es", name: "Spain", label: "西班牙", priority: "P3", score: 48, x: 35, y: 76 },
-  { id: "it", name: "Italy", label: "意大利", priority: "P3", score: 52, x: 60, y: 72 },
+  { id: "it", name: "Italy", label: "意大利", priority: "P3", score: 52, x: 66, y: 72 },
   { id: "no", name: "Nordics", label: "北欧", priority: "P3", score: 45, x: 63, y: 21 },
 ];
 
@@ -180,6 +196,21 @@ function formatTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "--:--";
   return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function daysAgo(value) {
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return null;
+  return Math.max(0, Math.floor((Date.now() - time) / (24 * 60 * 60 * 1000)));
+}
+
+function freshnessLabel(value) {
+  const days = daysAgo(value);
+  if (days === null) return "待核时";
+  if (days === 0) return "今日";
+  if (days <= 7) return `${days} 天内`;
+  if (days <= 30) return `${days} 天前`;
+  return "";
 }
 
 function sortDate(item) {
@@ -249,6 +280,7 @@ function isRightsVoice(item) {
 function isLegislationSignal(item) {
   if (isOfficialDocumentSignal(item)) return false;
   if (hasLitigationCase(item)) return false;
+  if (item.signal_type === "rights_holder_statement") return false;
   const haystack = signalHaystack(item);
   return (
     item.signal_type === "legislation_update" ||
@@ -328,16 +360,25 @@ function renderMetrics() {
   $("#metricOfficial").textContent = official;
   $("#metricRights").textContent = rights;
   $("#metricLegislation").textContent = legislation;
+  const recentSignals = getAllSignals().filter((item) => {
+    const time = new Date(sortDate(item)).getTime();
+    return !Number.isNaN(time) && Date.now() - time <= 30 * 24 * 60 * 60 * 1000;
+  });
+  const configuredSources = state.sources.filter((item) => item.configured).length;
 
   $("#metrics").innerHTML = [
     ["案件", state.cases.length],
     ["P0 对象", state.cases.filter((item) => item.priority === "P0").length],
     ["情报卡", state.intel.length],
     ["官方文书", official],
+    ["30天信号", recentSignals.length],
     ["最近更新", state.lastUpdated ? formatTime(state.lastUpdated) : "--:--"],
   ]
     .map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`)
     .join("");
+  $("#sourceCoverage").textContent = `源 ${configuredSources}/${state.sources.length}`;
+  $("#recentSignalCount").textContent = `${recentSignals.length} 条 / 30 天`;
+  $("#liveHeadline").textContent = getAllSignals()[0]?.title || "等待情报同步";
 }
 
 function renderMap() {
@@ -364,6 +405,9 @@ function renderMap() {
 
   $("#nordicMap").innerHTML = `
     <div class="wm-grid"></div>
+    <div class="wm-scan"></div>
+    <div class="wm-radar-ring one"></div>
+    <div class="wm-radar-ring two"></div>
     <div class="wm-map-label">EUROPE</div>
     <div class="wm-europe-shape"></div>
     <div class="wm-route r1"></div>
@@ -373,6 +417,8 @@ function renderMap() {
     <div class="wm-source-pin" style="left:42%; top:63%;">Judilibre</div>
     <div class="wm-source-pin" style="left:44%; top:55%;">SACD</div>
     <div class="wm-source-pin" style="left:46%; top:54%;">Figaro</div>
+    <div class="wm-source-pin" style="left:38%; top:52%;">SNE</div>
+    <div class="wm-source-pin" style="left:56%; top:30%;">Koda</div>
     ${points}
   `;
 
@@ -401,12 +447,14 @@ function renderIntelCard(item) {
   const jurisdiction = jurisdictionLabels[item.jurisdiction] || item.jurisdiction || "未知法域";
   const signalType = displaySignalType(item);
   const date = formatDate(sortDate(item));
+  const fresh = freshnessLabel(sortDate(item));
   return `
     <article class="wm-intel-card ${escapeHtml(item.priority || "P2")}">
       <div class="case-meta">
         ${priorityBadge(item.priority || "P2")}
         <span class="pill type-pill">${escapeHtml(signalType)}</span>
         <span class="pill">${escapeHtml(confidenceLabels[item.confidence] || item.confidence || "待确认")}</span>
+        ${fresh ? `<span class="pill fresh-pill">${escapeHtml(fresh)}</span>` : ""}
       </div>
       <h3>${escapeHtml(item.title)}</h3>
       <p>${escapeHtml(item.summary || item.summary_cn || "暂无摘要。")}</p>
@@ -452,13 +500,15 @@ function renderSources() {
   if (!target) return;
   const sourceItems = state.sources.length ? state.sources : [];
   target.innerHTML = sourceItems
-    .slice(0, 8)
+    .sort((a, b) => Number(b.configured) - Number(a.configured) || String(a.jurisdiction).localeCompare(String(b.jurisdiction)))
+    .slice(0, 14)
     .map((source) => {
       const checked = source.last_checked_at ? formatDate(source.last_checked_at) : "未检查";
       return `
         <article class="wm-source-item ${source.configured ? "configured" : "pending"}">
           <span>${escapeHtml(source.name)}</span>
           <strong>${source.configured ? "已接入" : "待凭证"}</strong>
+          <small>${escapeHtml(sourceTypeLabels[source.source_type] || source.source_type || "来源")}</small>
           <em>${escapeHtml(checked)}</em>
         </article>
       `;
@@ -559,11 +609,16 @@ function updateSelectedJurisdiction() {
 function updateClock() {
   const now = new Date();
   $("#systemClock").textContent = `${now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} 本地`;
+  if (state.nextRefreshAt) {
+    const seconds = Math.max(0, Math.ceil((state.nextRefreshAt - Date.now()) / 1000));
+    $("#refreshStatus").textContent = seconds ? `下次同步 ${seconds}s` : "正在同步";
+  }
 }
 
 function setEvidence(value) {
   state.evidence = value;
   $("#activeLayerName").textContent = layerLabels[value] || value;
+  $("#liveWindow").textContent = state.range === "all" ? "全部时间" : state.range === "7d" ? "最近 7 天" : "最近 30 天";
   document.querySelectorAll("[data-evidence]").forEach((item) => item.classList.toggle("active", item.dataset.evidence === value));
   renderAll();
 }
@@ -597,6 +652,7 @@ function attachEvents() {
       state.range = button.dataset.range;
       document.querySelectorAll("[data-range]").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
+      $("#liveWindow").textContent = state.range === "all" ? "全部时间" : state.range === "7d" ? "最近 7 天" : "最近 30 天";
       renderAll();
     });
   });
@@ -623,6 +679,7 @@ function attachEvents() {
 }
 
 async function load() {
+  $("#refreshStatus").textContent = "正在同步";
   const [cases, organizations, documents, intel, sources] = await Promise.all([
     api("/api/cases"),
     api("/api/organizations"),
@@ -636,6 +693,8 @@ async function load() {
   state.intel = intel;
   state.sources = sources;
   state.lastUpdated = new Date().toISOString();
+  state.nextRefreshAt = Date.now() + state.refreshMs;
+  $("#refreshStatus").textContent = `同步完成 ${formatTime(state.lastUpdated)}`;
   renderAll();
 }
 

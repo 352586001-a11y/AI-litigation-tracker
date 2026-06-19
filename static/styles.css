@@ -41,7 +41,7 @@ body.monitor-world {
   min-height: 100vh;
   overflow: hidden;
   color: #dce7ee;
-  background: #111922;
+  background: #0f171f;
 }
 
 .wm-shell {
@@ -56,10 +56,11 @@ body.monitor-world {
   height: 100vh;
   padding: 10px;
   background:
+    radial-gradient(circle at 56% 42%, rgba(108, 148, 169, 0.18), transparent 34%),
     linear-gradient(90deg, rgba(75, 102, 119, 0.10) 1px, transparent 1px),
     linear-gradient(0deg, rgba(75, 102, 119, 0.10) 1px, transparent 1px),
-    linear-gradient(180deg, #15212b, #101820);
-  background-size: 44px 44px, 44px 44px, auto;
+    linear-gradient(180deg, #17232d, #0f171f);
+  background-size: auto, 44px 44px, 44px 44px, auto;
 }
 
 .wm-topbar,
@@ -68,9 +69,9 @@ body.monitor-world {
 .wm-map-stage,
 .wm-case-dock,
 .wm-timeline {
-  border: 1px solid rgba(137, 163, 181, 0.25);
+  border: 1px solid rgba(157, 181, 194, 0.28);
   border-radius: 8px;
-  background: rgba(19, 31, 40, 0.88);
+  background: rgba(18, 30, 39, 0.86);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(14px);
 }
@@ -96,7 +97,8 @@ body.monitor-world {
   height: 11px;
   border-radius: 999px;
   background: #7fc7b2;
-  box-shadow: 0 0 0 6px rgba(127, 199, 178, 0.12);
+  box-shadow: 0 0 0 6px rgba(127, 199, 178, 0.12), 0 0 26px rgba(127, 199, 178, 0.65);
+  animation: wmPulse 1.6s ease-out infinite;
 }
 
 .wm-brand p,
@@ -341,10 +343,11 @@ body.monitor-world {
   inset: 0;
   overflow: hidden;
   background:
+    radial-gradient(circle at 48% 46%, rgba(130, 169, 187, 0.24), transparent 31%),
     linear-gradient(90deg, rgba(127, 160, 180, 0.14) 1px, transparent 1px),
     linear-gradient(0deg, rgba(127, 160, 180, 0.14) 1px, transparent 1px),
-    #172532;
-  background-size: 58px 58px, 58px 58px, auto;
+    #142330;
+  background-size: auto, 58px 58px, 58px 58px, auto;
 }
 
 .wm-grid {
@@ -359,17 +362,45 @@ body.monitor-world {
   position: absolute;
   right: 22px;
   bottom: 22px;
-  color: rgba(205, 224, 234, 0.10);
-  font-size: 82px;
+  color: rgba(205, 224, 234, 0.09);
+  font-size: 88px;
   font-weight: 900;
 }
 
 .wm-europe-shape {
   position: absolute;
-  inset: 82px 86px 72px;
-  border: 1px solid rgba(171, 195, 207, 0.16);
-  background: rgba(222, 235, 242, 0.16);
+  inset: 76px 76px 66px;
+  border: 1px solid rgba(171, 195, 207, 0.20);
+  background:
+    linear-gradient(135deg, rgba(222, 235, 242, 0.18), rgba(96, 132, 151, 0.11)),
+    rgba(222, 235, 242, 0.10);
   clip-path: polygon(26% 18%, 39% 9%, 58% 13%, 73% 26%, 78% 42%, 68% 57%, 73% 78%, 56% 89%, 44% 78%, 34% 86%, 22% 72%, 17% 58%, 21% 43%, 13% 30%);
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.24));
+}
+
+.wm-scan {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(151, 196, 214, 0.18), transparent);
+  opacity: 0.65;
+  transform: translateX(-100%);
+  animation: wmScan 7s linear infinite;
+}
+
+.wm-radar-ring {
+  position: absolute;
+  left: 48%;
+  top: 48%;
+  width: 44%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(130, 200, 183, 0.16);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.wm-radar-ring.two {
+  width: 68%;
+  opacity: 0.6;
 }
 
 .wm-route {
@@ -408,9 +439,10 @@ body.monitor-world {
   border: 1px solid rgba(127, 199, 178, 0.35);
   border-radius: 999px;
   color: #dff4ef;
-  background: rgba(41, 62, 74, 0.78);
+  background: rgba(36, 58, 71, 0.82);
   font-size: 11px;
   font-weight: 900;
+  box-shadow: 0 0 20px rgba(127, 199, 178, 0.14);
 }
 
 .wm-map-point {
@@ -420,12 +452,13 @@ body.monitor-world {
   min-height: 94px;
   transform: translate(-50%, -50%);
   padding: 10px;
-  border: 1px solid rgba(162, 184, 198, 0.35);
+  border: 1px solid rgba(162, 184, 198, 0.38);
   border-radius: 8px;
   color: #eaf3f6;
   text-align: left;
-  background: rgba(25, 39, 50, 0.92);
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.30);
+  background:
+    linear-gradient(180deg, rgba(42, 61, 73, 0.96), rgba(22, 35, 45, 0.95));
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .wm-map-point.P0 {
@@ -440,6 +473,7 @@ body.monitor-world {
 
 .wm-map-point.active {
   outline: 2px solid rgba(127, 199, 178, 0.8);
+  box-shadow: 0 0 0 7px rgba(127, 199, 178, 0.08), 0 22px 42px rgba(0, 0, 0, 0.35);
 }
 
 .wm-map-point span,
@@ -472,6 +506,43 @@ body.monitor-world {
   border-radius: 999px;
   background: currentColor;
   opacity: 0.55;
+}
+
+.wm-live-console {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(112px, 0.5fr) minmax(138px, 0.5fr);
+  gap: 8px;
+  pointer-events: none;
+}
+
+.wm-live-console div {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(157, 181, 194, 0.24);
+  border-radius: 7px;
+  background: rgba(12, 22, 30, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.wm-live-console span {
+  display: block;
+  color: #8fb0c1;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.wm-live-console strong {
+  display: block;
+  overflow: hidden;
+  color: #eef7f9;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wm-case-dock {
@@ -613,6 +684,11 @@ body.monitor-world {
   background: rgba(127, 199, 178, 0.18);
 }
 
+.monitor-world .fresh-pill {
+  color: #f5fbff;
+  background: rgba(89, 132, 154, 0.42);
+}
+
 .monitor-world .meta-list {
   color: #aebfca;
   background: rgba(224, 237, 245, 0.08);
@@ -637,6 +713,33 @@ body.monitor-world {
   color: #1e2933;
 }
 
+.wm-source-item small {
+  display: block;
+  color: #8ea6b4;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@keyframes wmPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(127, 199, 178, 0.26), 0 0 24px rgba(127, 199, 178, 0.50);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 11px rgba(127, 199, 178, 0), 0 0 26px rgba(127, 199, 178, 0.62);
+  }
+}
+
+@keyframes wmScan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @media (max-width: 1180px) {
   body.monitor-world {
     overflow: auto;
@@ -644,11 +747,11 @@ body.monitor-world {
 
   .wm-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(620px, 72vh) auto auto;
+    grid-template-rows: auto minmax(620px, 72vh) auto auto auto;
     grid-template-areas:
       "top"
-      "left"
       "map"
+      "left"
       "timeline"
       "right";
     height: auto;
@@ -676,6 +779,10 @@ body.monitor-world {
   .wm-timeline {
     grid-template-columns: 1fr;
   }
+
+  .wm-live-console {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -697,8 +804,23 @@ body.monitor-world {
   }
 
   .wm-map-point {
-    width: 126px;
-    min-height: 86px;
+    width: 94px;
+    min-height: 60px;
+    padding: 7px;
+  }
+
+  .wm-map-point span {
+    font-size: 12px;
+  }
+
+  .wm-map-point strong {
+    margin-top: 2px;
+    font-size: 17px;
+  }
+
+  .wm-map-point i {
+    height: 3px;
+    margin-top: 5px;
   }
 
   .wm-map-point em {

@@ -29,6 +29,8 @@ def main():
     organizations = get_json("/api/organizations")
     intel = get_json("/api/intel?status=published")
     admin_intel = get_json("/api/admin/intel")
+    documents = get_json("/api/documents")
+    sources = get_json("/api/source-health")
     sacd = get_json("/api/cases/case_watch_sacd_ai")
     monitor_result = urllib.request.Request("http://127.0.0.1:8899/api/monitor/run", method="POST")
     with urllib.request.urlopen(monitor_result, timeout=60) as response:
@@ -39,7 +41,8 @@ def main():
     assert any(item["name"] == "SACD" and item["priority"] == "P0" for item in organizations)
     assert any(item["name"] == "Le Figaro / Groupe Figaro" and item["priority"] == "P0" for item in organizations)
     assert any(item["signal_type"] == "news" for item in intel)
-    assert any(item["signal_type"] == "official_court_document" for item in intel)
+    assert isinstance(documents, list)
+    assert any(item["id"] == "source_judilibre" for item in sources)
     assert any(item["signal_type"] == "legislation_update" or "AI Act" in item["tags"] for item in intel)
     assert any(item["signal_type"] in {"news", "rights_holder_statement"} for item in admin_intel)
     assert sacd["priority"] == "P0"

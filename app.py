@@ -22,6 +22,9 @@ DB_PATH = BASE_DIR / "data" / "tracker.db"
 STATIC_DIR = BASE_DIR / "static"
 CONFIG_DIR = BASE_DIR / "config"
 OFFICIAL_CONFIG_PATH = CONFIG_DIR / "official-sources.local.json"
+MONITOR_HTTP_TIMEOUT = float(os.environ.get("MONITOR_HTTP_TIMEOUT", "1.8"))
+MONITOR_RSS_TIMEOUT = float(os.environ.get("MONITOR_RSS_TIMEOUT", "4"))
+MONITOR_RUN_BUDGET_SECONDS = float(os.environ.get("MONITOR_RUN_BUDGET_SECONDS", "38"))
 
 OFFICIAL_SOURCE_CONFIGS = {
     "source_judilibre": {
@@ -95,6 +98,34 @@ MONITOR_NEWS_QUERIES = [
         "priority": "P1",
         "tags": "United Kingdom,Getty,Stability AI,copyright",
     },
+    {
+        "id": "news_eu_ai_copyright_trackers",
+        "query": '"AI and Copyright Case Tracker" Europe GEMA Suno OpenAI Penguin',
+        "jurisdiction": "European Union",
+        "priority": "P1",
+        "tags": "Europe,case tracker,AI copyright,litigation",
+    },
+    {
+        "id": "news_de_penguin_openai",
+        "query": '"Penguin Random House" OpenAI Germany copyright lawsuit',
+        "jurisdiction": "Germany",
+        "priority": "P1",
+        "tags": "Germany,Penguin Random House,OpenAI,copyright,litigation",
+    },
+    {
+        "id": "news_dk_koda_suno",
+        "query": 'Koda Suno Denmark copyright lawsuit AI music',
+        "jurisdiction": "Denmark",
+        "priority": "P1",
+        "tags": "Denmark,Koda,Suno,AI music,copyright,litigation",
+    },
+    {
+        "id": "news_it_perplexity_rti",
+        "query": '"RTI" "Medusa Film" Perplexity AI copyright Italy',
+        "jurisdiction": "Italy",
+        "priority": "P2",
+        "tags": "Italy,RTI,Medusa Film,Perplexity,copyright,litigation",
+    },
 ]
 
 LEGISLATION_MONITORS = [
@@ -126,6 +157,20 @@ LEGISLATION_MONITORS = [
         "priority": "P1",
         "tags": "France,Assemblée nationale,AI,copyright,legislation",
     },
+    {
+        "id": "leg_fr_presumption_ai_content",
+        "query": 'domain:assemblee-nationale.fr "présomption d’utilisation" "intelligence artificielle"',
+        "jurisdiction": "France",
+        "priority": "P0",
+        "tags": "France,Assemblée nationale,Darcos bill,AI,copyright,presumption,legislation",
+    },
+    {
+        "id": "leg_fr_conseil_etat_ai_content",
+        "query": 'domain:conseil-etat.fr "présomption" "intelligence artificielle" "contenus culturels"',
+        "jurisdiction": "France",
+        "priority": "P0",
+        "tags": "France,Conseil d'Etat,Darcos bill,AI,copyright,legislation",
+    },
 ]
 
 RIGHTS_HOLDER_MONITORS = [
@@ -136,6 +181,14 @@ RIGHTS_HOLDER_MONITORS = [
         "jurisdiction": "France",
         "priority": "P0",
         "tags": "SACD,rights-holder,AI,copyright",
+    },
+    {
+        "id": "rights_sacd_darcos_bill",
+        "query": 'domain:sacd.fr "preuve d\'utilisation" "IA" "Conseil d\'Etat"',
+        "organization_id": "org_sacd",
+        "jurisdiction": "France",
+        "priority": "P0",
+        "tags": "SACD,Darcos bill,rights-holder,AI,copyright,presumption",
     },
     {
         "id": "rights_figaro",
@@ -160,6 +213,14 @@ RIGHTS_HOLDER_MONITORS = [
         "jurisdiction": "France",
         "priority": "P1",
         "tags": "SGDL,SNE,Meta,Llama,rights-holder",
+    },
+    {
+        "id": "rights_sne_presumption_bill",
+        "query": 'domain:sne.fr "présomption d\'utilisation" "intelligence artificielle"',
+        "organization_id": "org_sne",
+        "jurisdiction": "France",
+        "priority": "P1",
+        "tags": "SNE,rights-holder,Darcos bill,AI,copyright,presumption",
     },
 ]
 
@@ -195,9 +256,16 @@ NEWS_DOMAIN_ALLOWLIST = {
     "politico.eu": "Politico Europe",
     "euractiv.com": "Euractiv",
     "lawfaremedia.org": "Lawfare",
+    "cms.law": "CMS",
+    "taylorwessing.com": "Taylor Wessing",
+    "mishcon.com": "Mishcon de Reya",
+    "dlapiper.com": "DLA Piper",
+    "hoganlovells.com": "Hogan Lovells",
     "musicbusinessworldwide.com": "Music Business Worldwide",
+    "digitalmusicnews.com": "Digital Music News",
     "juve-patent.com": "JUVE Patent",
     "thetechnollama.wordpress.com": "The Technollama",
+    "koda.dk": "Koda",
     "sacd.fr": "SACD",
     "gema.de": "GEMA",
     "sgdl.org": "SGDL",
@@ -210,6 +278,7 @@ NEWS_DOMAIN_ALLOWLIST = {
     "culture.gouv.fr": "France Ministry of Culture",
     "assemblee-nationale.fr": "Assemblée nationale",
     "senat.fr": "Sénat",
+    "conseil-etat.fr": "Conseil d'Etat",
     "legifrance.gouv.fr": "Légifrance",
     "arcom.fr": "Arcom",
     "cnil.fr": "CNIL",
@@ -491,6 +560,21 @@ def seed(conn):
             "P0 watch object for Groupe Figaro litigation, licensing, opt-out and neighboring-rights signals.",
         ),
         (
+            "case_fr_ai_presumption_bill",
+            "法国 AI 内容使用证明推定法案监控",
+            "France",
+            "Assemblée nationale / Sénat / Conseil d'Etat",
+            None,
+            None,
+            "WATCH",
+            "委员会审议与官方意见跟踪",
+            "legislation,burden_of_proof,presumption,training_transparency,copyright",
+            "General-purpose AI systems",
+            94,
+            "P0",
+            "法国围绕 AI 使用受保护内容的举证推定和透明度规则推进立法。该对象聚合 SACD/SNE 等权利人发声、Assemblée nationale 程序和 Conseil d'Etat 意见。",
+        ),
+        (
             "case_eu_tdm_watch",
             "EU TDM and AI Act copyright implementation watch",
             "European Union",
@@ -518,6 +602,8 @@ def seed(conn):
     links = [
         ("case_watch_sacd_ai", "org_sacd", "watch_target"),
         ("case_watch_figaro_ai", "org_figaro", "watch_target"),
+        ("case_fr_ai_presumption_bill", "org_sacd", "rights_holder_support"),
+        ("case_fr_ai_presumption_bill", "org_sne", "rights_holder_support"),
         ("case_fr_meta_books3", "org_sgdl", "plaintiff_org"),
         ("case_fr_meta_books3", "org_sne", "plaintiff_org"),
         ("case_fr_meta_books3", "org_snac", "plaintiff_org"),
@@ -534,7 +620,13 @@ def seed(conn):
         ("source_eurlex", "EUR-Lex", "official_portal", "European Union", "https://eur-lex.europa.eu/", "daily", "Official EU law and case-law database."),
         ("source_hudoc", "HUDOC", "official_database", "Council of Europe", "https://hudoc.echr.coe.int/", "weekly", "ECHR database for peripheral freedom-of-expression and property-rights signals."),
         ("source_sacd", "SACD official site", "official_site", "France", "https://www.sacd.fr/", "daily", "P0 watch source for author-side AI copyright statements."),
+        ("source_sne", "SNE official site", "official_site", "France", "https://www.sne.fr/", "daily", "French publishers' association statements on AI training, litigation and copyright legislation."),
         ("source_figaro", "Le Figaro / Groupe Figaro", "publisher_site", "France", "https://www.lefigaro.fr/", "daily", "P0 watch source for litigation, licensing and neighboring-rights signals."),
+        ("source_conseil_etat", "Conseil d'Etat", "official_portal", "France", "https://www.conseil-etat.fr/", "daily", "French official legal opinions and administrative court signals for AI copyright policy."),
+        ("source_assemblee", "Assemblée nationale", "official_portal", "France", "https://www.assemblee-nationale.fr/", "daily", "French parliamentary dossiers and amendments for AI copyright legislation."),
+        ("source_cms_ai_tracker", "CMS AI copyright case tracker", "law_firm_tracker", "Europe", "https://cms.law/", "daily", "European AI copyright case tracker used as a legal intelligence discovery layer."),
+        ("source_taylor_wessing_ai_tracker", "Taylor Wessing AI copyright tracker", "law_firm_tracker", "Europe", "https://www.taylorwessing.com/", "daily", "European AI and copyright tracker used to discover recent litigation procedural updates."),
+        ("source_mishcon_ai_ip_tracker", "Mishcon AI and IP cases tracker", "law_firm_tracker", "Europe", "https://www.mishcon.com/", "weekly", "AI and IP cases tracker used as a secondary litigation intelligence source."),
     ]
     conn.executemany(
         """
@@ -545,30 +637,7 @@ def seed(conn):
         [row + (now, now) for row in sources],
     )
 
-    docs = [
-        (
-            "doc_seed_judilibre",
-            None,
-            "source_judilibre",
-            "Judilibre official API reference",
-            "https://www.data.gouv.fr/dataservices/api-judilibre",
-            "official_reference",
-            "France",
-            "official",
-            "French judicial decisions open data source for case-document capture.",
-        ),
-        (
-            "doc_seed_eurlex",
-            "case_eu_tdm_watch",
-            "source_eurlex",
-            "EUR-Lex official EU law database",
-            "https://eur-lex.europa.eu/",
-            "official_reference",
-            "European Union",
-            "official",
-            "EU-level source for case law, AI Act and copyright implementation monitoring.",
-        ),
-    ]
+    docs = []
     conn.executemany(
         """
         INSERT OR IGNORE INTO documents
@@ -713,6 +782,24 @@ def seed(conn):
         """,
         [row[:-1] + (row[-1], now, now, now if row[10] == "published" else None) for row in intel_cards],
     )
+    case_updates = [
+        (
+            "2026-03-09 口头审理 / 2026-07-31 判决预期",
+            "GEMA 在慕尼黑针对 Suno 提起 AI 音乐版权诉讼。Taylor Wessing 跟踪器显示该案 2026-03-09 已进入口头审理节点，并提示 2026-07-31 判决预期，需要持续追踪判决全文和上诉动态。",
+            now,
+            "case_de_gema_suno",
+        ),
+        (
+            "2026-03-27 已起诉 / 诉讼待审",
+            "Penguin Random House Verlagsgruppe 在德国慕尼黑起诉 OpenAI，CMS/Taylor Wessing 跟踪器列为 2026-03-27 版权侵权诉讼。该案把欧洲图书出版商与 OpenAI 的训练数据风险推到高优先级。",
+            now,
+            "case_de_penguin_openai",
+        ),
+    ]
+    conn.executemany(
+        "UPDATE cases SET procedural_stage = ?, summary = ?, updated_at = ? WHERE id = ?",
+        case_updates,
+    )
 
     organization_cn = [
         ("org_sacd", "法国戏剧作者与作曲者协会", "法国戏剧、影视、编剧和导演作者权益组织。任何 AI 训练数据、作者报酬或透明度线索都进入最高优先级审核。"),
@@ -736,6 +823,7 @@ def seed(conn):
         ("case_fr_meta_books3", "法国作者和出版商诉 Meta / Llama 训练语料案", "待官方文书确认", "SGDL、SNE、SNAC 针对 Meta/Llama 训练语料的法国诉讼线索，涉及受版权保护图书是否被未经授权用于训练。仍需抓取官方法院文书或案号。"),
         ("case_watch_sacd_ai", "SACD AI 版权维权动态监控", "持续监控", "SACD 是 P0 监控对象。重点跟踪权利人声明、法院动作、AI Act 落地压力和创作者补偿主张。"),
         ("case_watch_figaro_ai", "Le Figaro 新闻内容 AI 使用风险监控", "持续监控", "Groupe Figaro 是 P0 监控对象。重点跟踪诉讼、授权谈判、opt-out、邻接权和新闻语料复用线索。"),
+        ("case_fr_ai_presumption_bill", "法国 AI 内容使用证明推定法案监控", "委员会审议与官方意见跟踪", "法国围绕 AI 使用受保护内容的举证推定和透明度规则推进立法。该对象聚合 SACD/SNE 等权利人发声、Assemblée nationale 程序和 Conseil d'État 意见。"),
         ("case_eu_tdm_watch", "欧盟 TDM 例外与 AI Act 版权执行监控", "持续监控", "跟踪影响 AI 训练透明度、TDM 例外、opt-out 和 GPAI 合规的欧盟法院、官方解释和执行动态。"),
     ]
     conn.executemany(
@@ -750,21 +838,20 @@ def seed(conn):
         ("source_eurlex", "EUR-Lex", "欧盟官方法律和判例数据库。"),
         ("source_hudoc", "HUDOC", "欧洲人权法院数据库，用于外围表达自由和财产权风险。"),
         ("source_sacd", "SACD 官方网站", "SACD 权利人声明和 AI 版权立场的 P0 监控源。"),
+        ("source_sne", "SNE 官方网站", "法国出版商协会关于 AI 训练、图书语料、立法和诉讼的权利人发声源。"),
         ("source_figaro", "Le Figaro / Groupe Figaro", "Le Figaro 诉讼、授权、邻接权和新闻语料信号源。"),
+        ("source_conseil_etat", "Conseil d'État", "法国行政最高法院和政府咨询意见来源，重点追踪 AI 内容使用证明和立法意见。"),
+        ("source_assemblee", "Assemblée nationale", "法国国民议会议案、委员会和修正案来源，用于追踪 AI 版权立法进度。"),
+        ("source_cms_ai_tracker", "CMS AI 版权案件跟踪器", "欧洲 AI 版权诉讼跟踪器，作为近期诉讼程序节点发现源。"),
+        ("source_taylor_wessing_ai_tracker", "Taylor Wessing AI 版权跟踪器", "欧洲 AI 与版权案件跟踪器，用于补充近期案件状态和日期。"),
+        ("source_mishcon_ai_ip_tracker", "Mishcon AI/IP 案件跟踪器", "AI 与知识产权案件跟踪器，用作次级法律情报源。"),
     ]
     conn.executemany(
         "UPDATE sources SET name = ?, notes = ?, updated_at = ? WHERE id = ?",
         [(name, notes, now, source_id) for source_id, name, notes in source_cn],
     )
 
-    document_cn = [
-        ("doc_seed_judilibre", "Judilibre 官方 API 参考", "法国司法裁判开放数据来源，用于后续抓取案件官方文书。"),
-        ("doc_seed_eurlex", "EUR-Lex 欧盟官方法律数据库", "欧盟层面的法律、判例、AI Act 和版权执行监控来源。"),
-    ]
-    conn.executemany(
-        "UPDATE documents SET title = ?, extracted_text = ? WHERE id = ?",
-        [(title, text, doc_id) for doc_id, title, text in document_cn],
-    )
+    conn.execute("DELETE FROM documents WHERE id IN ('doc_seed_judilibre', 'doc_seed_eurlex')")
 
     intel_cn = [
         ("intel_de_gema_openai_guardian_2025_11_11", "德国法院判令 OpenAI 在 GEMA 版权案中赔偿", "The Guardian 报道德国法院认定 OpenAI 在 ChatGPT 歌词使用中构成版权侵权并需赔偿。该项属于欧洲范围内高信号诉讼情报，需要继续追踪原始判决和上诉动态。"),
@@ -778,6 +865,16 @@ def seed(conn):
         "UPDATE intelligence_cards SET title = ?, summary = ?, updated_at = ? WHERE id = ?",
         [(title, summary, now, card_id) for card_id, title, summary in intel_cn],
     )
+    conn.execute(
+        """
+        UPDATE intelligence_cards
+        SET signal_type = 'legislation_update',
+            source_type = 'official_legal_database',
+            updated_at = ?
+        WHERE id = 'intel_eu_ai_act_official_2024_07_12'
+        """,
+        (now,),
+    )
     seed_extra_european_ai_litigation(conn, now)
 
 
@@ -787,6 +884,12 @@ def seed_extra_european_ai_litigation(conn, now):
         ("org_getty", "Getty Images", "Getty Images", "United Kingdom", "publisher", "P1", 83, "Image archive and licensing rights holder. Track UK Stability AI litigation."),
         ("org_laion", "LAION", "Large-scale Artificial Intelligence Open Network", "Germany", "ai_dataset_org", "P2", 71, "Open dataset organization involved in German TDM exception litigation."),
         ("org_partec", "ParTec AG", "ParTec AG", "Germany", "technology_company", "P3", 58, "AI/HPC hardware patent plaintiff in Unified Patent Court litigation against Nvidia."),
+        ("org_penguin_random_house_de", "Penguin Random House", "Penguin Random House Verlagsgruppe", "Germany", "publisher", "P1", 86, "Book publisher plaintiff in a German copyright infringement claim against OpenAI. Track complaint, answer and Munich court timetable."),
+        ("org_koda", "Koda", "Koda", "Denmark", "cmo", "P1", 84, "Danish music collecting society. Track Suno litigation and AI music licensing/remuneration statements."),
+        ("org_rti", "RTI", "Reti Televisive Italiane S.p.A.", "Italy", "publisher", "P2", 74, "Mediaset/MFE television rights holder in Italian Perplexity AI copyright litigation."),
+        ("org_medusa_film", "Medusa Film", "Medusa Film S.p.A.", "Italy", "publisher", "P2", 72, "Italian audiovisual rights holder in Perplexity AI copyright litigation."),
+        ("org_boligportal", "BoligPortal", "BoligPortal A/S", "Denmark", "database_owner", "P2", 68, "Danish database rights holder in scraping and TDM opt-out litigation."),
+        ("org_redata", "ReData", "ReData A/S", "Denmark", "data_company", "P3", 50, "Danish data analytics defendant in BoligPortal database/TDM litigation."),
     ]
     conn.executemany(
         """
@@ -873,6 +976,66 @@ def seed_extra_european_ai_litigation(conn, now):
             "P3",
             "德国超算公司 ParTec 在欧洲统一专利法院体系下起诉 Nvidia，涉及 DGX AI 超算相关专利。该案属于相邻 AI 知识产权风险，低于版权类诉讼优先级。",
         ),
+        (
+            "case_de_penguin_openai",
+            "Penguin Random House v. OpenAI 德国图书版权案",
+            "Germany",
+            "Landgericht München I",
+            None,
+            None,
+            "CASE",
+            "2026-03-27 已起诉 / 诉讼待审",
+            "copyright_infringement,book_corpus,training_data,outputs",
+            "OpenAI",
+            86,
+            "P1",
+            "Penguin Random House Verlagsgruppe 在德国慕尼黑起诉 OpenAI，CMS/Taylor Wessing 跟踪器列为 2026-03-27 版权侵权诉讼。该案把欧洲图书出版商与 OpenAI 的训练数据风险推到高优先级。",
+        ),
+        (
+            "case_dk_koda_suno",
+            "Koda v. Suno 丹麦音乐版权案",
+            "Denmark",
+            "Copenhagen City Court / Denmark",
+            None,
+            None,
+            "CASE",
+            "2025-11 已起诉 / 待官方文书补录",
+            "copyright_infringement,music_generation,training_data,outputs,remuneration",
+            "Suno",
+            84,
+            "P1",
+            "丹麦音乐集体管理组织 Koda 起诉 Suno，指控未经许可使用丹麦音乐训练和生成相似输出。该案是北欧 AI 音乐版权风险的核心监控对象。",
+        ),
+        (
+            "case_it_rti_medusa_perplexity",
+            "RTI / Medusa Film v. Perplexity AI 意大利版权案",
+            "Italy",
+            "Court of Rome",
+            None,
+            None,
+            "CASE",
+            "2025-12 起诉 / 2026-02 仍在审理",
+            "copyright_infringement,audiovisual_works,training_data,related_rights",
+            "Perplexity AI / Sonar",
+            74,
+            "P2",
+            "RTI 和 Medusa Film 在罗马法院起诉 Perplexity AI，主张其未经授权使用影视内容训练生成式 AI。CMS 称其为意大利首个针对 AI 使用版权内容的法律行动。",
+        ),
+        (
+            "case_dk_boligportal_redata",
+            "BoligPortal v. ReData 丹麦数据库/TDM 案",
+            "Denmark",
+            "Østre Landsret / Danish courts",
+            "BS-36038/2020-OLR",
+            None,
+            "CASE",
+            "2026-05-12 上诉判决 / TDM opt-out 观察",
+            "database_right,text_and_data_mining,opt_out,scraping,machine_readability",
+            "Data scraping / TDM systems",
+            68,
+            "P2",
+            "丹麦 BoligPortal v. ReData 案围绕数据库权、抓取和 TDM opt-out 是否足够机器可读展开。它不是生成式 AI 训练主案，但会影响欧洲 opt-out 和机器可读保留规则。",
+        ),
     ]
     conn.executemany(
         """
@@ -890,6 +1053,12 @@ def seed_extra_european_ai_litigation(conn, now):
         ("case_uk_getty_stability", "org_getty", "plaintiff"),
         ("case_de_kneschke_laion", "org_laion", "defendant_dataset_org"),
         ("case_de_partec_nvidia_upc", "org_partec", "plaintiff"),
+        ("case_de_penguin_openai", "org_penguin_random_house_de", "plaintiff"),
+        ("case_dk_koda_suno", "org_koda", "plaintiff_cmo"),
+        ("case_it_rti_medusa_perplexity", "org_rti", "plaintiff"),
+        ("case_it_rti_medusa_perplexity", "org_medusa_film", "plaintiff"),
+        ("case_dk_boligportal_redata", "org_boligportal", "plaintiff_database_owner"),
+        ("case_dk_boligportal_redata", "org_redata", "defendant_data_company"),
     ]
     conn.executemany(
         "INSERT OR IGNORE INTO case_organizations (case_id, organization_id, role) VALUES (?, ?, ?)",
@@ -987,6 +1156,222 @@ def seed_extra_european_ai_litigation(conn, now):
             3,
             "2024-10-28T00:00:00+00:00",
         ),
+        (
+            "intel_sne_fr_bill_commission_2026_06_03",
+            "法国 AI 内容使用证明法案获国民议会委员会通过",
+            "SNE 报道，法国国民议会文化事务委员会于 2026-06-02 通过 Darcos 法案，拟建立 AI 供应商使用文化内容的推定机制。该动态归入法国 P0 立法风险。",
+            "https://www.sne.fr/actu/preuve-dutilisation-des-contenus-culturels-par-lia-la-proposition-de-loi-adoptee-en-commission-par-les-deputes/",
+            "SNE",
+            "official_site",
+            "France",
+            "org_sne",
+            "case_fr_ai_presumption_bill",
+            "P0",
+            "published",
+            "legislation_update",
+            "SNE,Darcos bill,Assemblée nationale,presumption,AI,copyright,France",
+            "semi_official",
+            10,
+            "2026-06-03T00:00:00+00:00",
+        ),
+        (
+            "intel_sne_gov_pressure_2026_06_12",
+            "SNE 批评法国政府削弱文化与新闻版权保护",
+            "SNE 于 2026-06-12 发布权利人声明，称跨党派 Darcos 文本旨在建立内容使用推定，帮助权利人证明 AI 使用受保护内容。该信号显示法国权利人阵营仍在高压游说。",
+            "https://www.sne.fr/actu/pourquoi-le-gouvernement-laisse-t-il-les-deputes-sattaquer-frontalement-a-la-culture-a-la-presse-et-a-la-creation-francaise/",
+            "SNE",
+            "official_site",
+            "France",
+            "org_sne",
+            "case_fr_ai_presumption_bill",
+            "P1",
+            "published",
+            "rights_holder_statement",
+            "SNE,rights-holder,Darcos bill,culture,press,AI,copyright,France",
+            "semi_official",
+            8,
+            "2026-06-12T00:00:00+00:00",
+        ),
+        (
+            "intel_sacd_conseil_etat_2026_03_24",
+            "SACD 称 Conseil d'État 支持 AI 内容使用证明法案稳健性",
+            "SACD 官网 2026-03-24 发布创意行业联合声明，认为 Conseil d'État 意见确认法国关于 AI 使用受保护内容推定机制的合宪性和欧洲法兼容性。该项是 SACD P0 权利人发声。",
+            "https://www.sacd.fr/fr/proposition-de-loi-sur-la-preuve-dutilisation-des-contenus-par-les-ia-avis-favorable-du-conseil",
+            "SACD",
+            "official_site",
+            "France",
+            "org_sacd",
+            "case_fr_ai_presumption_bill",
+            "P0",
+            "published",
+            "rights_holder_statement",
+            "SACD,Conseil d'Etat,Darcos bill,AI,copyright,France,presumption",
+            "semi_official",
+            10,
+            "2026-03-24T00:00:00+00:00",
+        ),
+        (
+            "intel_sacd_25000_signatories_2026_04_28",
+            "SACD：超 25,000 名签署者要求完整适用 AI 法",
+            "SACD 官网 2026-04-28 动态显示创作者阵营继续推动法国和欧洲完整适用 AI 法，并支持 AI 使用作品推定机制进入议程。该信号归入权利人官方发声。",
+            "https://www.sacd.fr/fr/plus-de-25-000-signataires-pour-appeler-lapplication-pleine-et-entiere-de-la-loi-sur-lia-en",
+            "SACD",
+            "official_site",
+            "France",
+            "org_sacd",
+            "case_fr_ai_presumption_bill",
+            "P0",
+            "published",
+            "rights_holder_statement",
+            "SACD,creators,AI Act,presumption,petition,France,Europe",
+            "semi_official",
+            9,
+            "2026-04-28T00:00:00+00:00",
+        ),
+        (
+            "intel_sacd_culture_sovereignty_2026_05_05",
+            "SACD：牺牲文化不是技术主权",
+            "SACD 2026-05-05 发布文化与信息行业联合立场，称牺牲知识产权不是主权，并支持参议院保护创作的立法路径。该项属于法国 P0 权利人集体发声。",
+            "https://www.sacd.fr/fr/ia-sacrifier-la-culture-sur-lautel-de-la-technologie-est-une-erreur-de-civilisation-0",
+            "SACD",
+            "official_site",
+            "France",
+            "org_sacd",
+            "case_fr_ai_presumption_bill",
+            "P0",
+            "published",
+            "rights_holder_statement",
+            "SACD,culture,AI,copyright,rights-holder,France",
+            "semi_official",
+            9,
+            "2026-05-05T00:00:00+00:00",
+        ),
+        (
+            "intel_senat_presumption_report_2026_04_08",
+            "法国参议院报告解释 AI 内容使用推定机制",
+            "Sénat 官方报告指出，拟通过程序性推定纠正权利人与 AI 供应商之间的信息不对称，并推动许可谈判。该项作为法国官方立法文书进入立法层。",
+            "https://www.senat.fr/rap/l25-496/l25-496_mono.html",
+            "Sénat",
+            "official_portal",
+            "France",
+            None,
+            "case_fr_ai_presumption_bill",
+            "P0",
+            "published",
+            "legislation_update",
+            "Sénat,Darcos bill,AI,copyright,presumption,legislation,France",
+            "official",
+            10,
+            "2026-04-08T00:00:00+00:00",
+        ),
+        (
+            "intel_eu_gpai_code_2026_04_23",
+            "欧委会 GPAI Code 页面更新版权章节与签署状态",
+            "欧委会 GPAI Code 官方页面 2026-04-23 更新，明确 Code 帮助 GPAI 模型提供者履行 AI Act 的透明度和版权义务，并提供单独的 Copyright chapter。",
+            "https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai",
+            "European Commission",
+            "official_portal",
+            "European Union",
+            None,
+            "case_eu_tdm_watch",
+            "P1",
+            "published",
+            "legislation_update",
+            "European Commission,GPAI Code,AI Act,copyright,transparency,Article 53",
+            "official",
+            7,
+            "2026-04-23T00:00:00+00:00",
+        ),
+        (
+            "intel_de_penguin_openai_cms_2026_03_27",
+            "Penguin Random House v. OpenAI 德国图书版权案进入诉讼层",
+            "CMS AI Copyright Case Tracker 将 Penguin Random House v. OpenAI 列为德国 2026-03-27 待审版权侵权案。该案把图书出版商对 OpenAI 训练数据和输出的主张纳入欧洲核心诉讼版图。",
+            "https://cms.law/en/int/publication/artificial-intelligence-and-copyright-case-tracker/germany-penguin-random-house-v.-openai-27-march-2026",
+            "CMS AI Copyright Case Tracker",
+            "law_firm_tracker",
+            "Germany",
+            "org_penguin_random_house_de",
+            "case_de_penguin_openai",
+            "P1",
+            "published",
+            "news",
+            "Penguin Random House,OpenAI,Germany,book corpus,copyright,litigation",
+            "semi_official",
+            8,
+            "2026-03-27T00:00:00+00:00",
+        ),
+        (
+            "intel_dk_koda_suno_official_2025_11_13",
+            "Koda 官方宣布起诉 Suno 盗用丹麦音乐",
+            "Koda 官网宣布对 Suno 提起诉讼，主张 Suno 未经许可使用丹麦艺术家音乐训练并生成高度相似歌曲。该项作为北欧 AI 音乐版权诉讼进入 P1 监控。",
+            "https://www.koda.dk/en/about-koda/news/koda-sues-us-tech-company-suno-for-stealing-danish-artists-music",
+            "Koda",
+            "official_site",
+            "Denmark",
+            "org_koda",
+            "case_dk_koda_suno",
+            "P1",
+            "published",
+            "news",
+            "Koda,Suno,Denmark,AI music,copyright,training data,litigation",
+            "semi_official",
+            8,
+            "2025-11-13T00:00:00+00:00",
+        ),
+        (
+            "intel_it_perplexity_cms_2025_12_04",
+            "RTI / Medusa Film v. Perplexity 成为意大利 AI 版权案",
+            "CMS 跟踪器称 RTI 和 Medusa Film 在罗马法院起诉 Perplexity AI，主张其未经授权使用影视内容训练生成式 AI，标志意大利 AI 版权诉讼风险抬升。",
+            "https://cms.law/en/int/publication/artificial-intelligence-and-copyright-case-tracker",
+            "CMS AI Copyright Case Tracker",
+            "law_firm_tracker",
+            "Italy",
+            "org_rti",
+            "case_it_rti_medusa_perplexity",
+            "P2",
+            "published",
+            "news",
+            "RTI,Medusa Film,Perplexity,Italy,audiovisual,copyright,litigation",
+            "semi_official",
+            6,
+            "2025-12-04T00:00:00+00:00",
+        ),
+        (
+            "intel_dk_boligportal_taylorwessing_2026_05_12",
+            "BoligPortal v. ReData 上诉判决成为机器可读 opt-out 信号",
+            "Taylor Wessing 2026-05-27 更新的 AI and Copyright Tracker 将 BoligPortal v. ReData 列为丹麦 2026-05-12 上诉判决，涉及数据库权、抓取和 TDM opt-out。",
+            "https://www.taylorwessing.com/en/campaigns/de/2025/ai-and-copyright-tracker",
+            "Taylor Wessing",
+            "law_firm_tracker",
+            "Denmark",
+            "org_boligportal",
+            "case_dk_boligportal_redata",
+            "P2",
+            "published",
+            "news",
+            "BoligPortal,ReData,Denmark,database right,TDM,opt-out,litigation",
+            "semi_official",
+            5,
+            "2026-05-12T00:00:00+00:00",
+        ),
+        (
+            "intel_de_gema_suno_taylorwessing_2026_03_09",
+            "GEMA v. Suno 进入 2026 审理节点",
+            "Taylor Wessing 跟踪器显示 GEMA v. Suno 在德国 2026-03-09 进入口头审理节点，并提示 2026-07-31 判决预期。该项提升音乐生成诉讼的近期时效性。",
+            "https://www.taylorwessing.com/en/campaigns/de/2025/ai-and-copyright-tracker",
+            "Taylor Wessing",
+            "law_firm_tracker",
+            "Germany",
+            "org_gema",
+            "case_de_gema_suno",
+            "P1",
+            "published",
+            "news",
+            "GEMA,Suno,Germany,AI music,hearing,judgment expected,copyright",
+            "semi_official",
+            7,
+            "2026-03-09T00:00:00+00:00",
+        ),
     ]
     conn.executemany(
         """
@@ -1054,7 +1439,7 @@ def is_allowed_monitor_url(url):
     return any(host.endswith(domain) for domain in NEWS_DOMAIN_ALLOWLIST)
 
 
-def request_gdelt_articles(query, max_records=6):
+def request_gdelt_articles(query, max_records=5):
     params = urlencode(
         {
             "query": query,
@@ -1066,7 +1451,7 @@ def request_gdelt_articles(query, max_records=6):
     )
     url = f"https://api.gdeltproject.org/api/v2/doc/doc?{params}"
     try:
-        payload = request_json(url, timeout=3)
+        payload = request_json(url, timeout=MONITOR_HTTP_TIMEOUT)
     except Exception:
         return []
     return payload.get("articles", []) if isinstance(payload, dict) else []
@@ -1074,7 +1459,7 @@ def request_gdelt_articles(query, max_records=6):
 
 def request_rss_items(url):
     try:
-        raw = request_text(url, timeout=8)
+        raw = request_text(url, timeout=MONITOR_RSS_TIMEOUT)
         root = ET.fromstring(raw)
     except Exception:
         return []
@@ -1123,11 +1508,18 @@ def insert_monitor_card(conn, card):
     )
 
 
-def run_gdelt_monitor(conn):
+def monitor_budget_exhausted(deadline):
+    return deadline is not None and time.monotonic() >= deadline
+
+
+def run_gdelt_monitor(conn, deadline=None):
     inserted = 0
     checked = 0
     errors = []
     for config in MONITOR_NEWS_QUERIES:
+        if monitor_budget_exhausted(deadline):
+            errors.append({"query": config["id"], "error": "monitor time budget exhausted"})
+            break
         try:
             for article in request_gdelt_articles(config["query"]):
                 checked += 1
@@ -1165,13 +1557,16 @@ def run_gdelt_monitor(conn):
     return {"source": "gdelt_news", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
 
 
-def run_rights_holder_monitor(conn):
+def run_rights_holder_monitor(conn, deadline=None):
     inserted = 0
     checked = 0
     errors = []
     for config in RIGHTS_HOLDER_MONITORS:
+        if monitor_budget_exhausted(deadline):
+            errors.append({"query": config["id"], "error": "monitor time budget exhausted"})
+            break
         try:
-            for article in request_gdelt_articles(config["query"], max_records=8):
+            for article in request_gdelt_articles(config["query"], max_records=5):
                 checked += 1
                 url = article.get("url") or ""
                 if not url or not is_allowed_monitor_url(url):
@@ -1208,13 +1603,16 @@ def run_rights_holder_monitor(conn):
     return {"source": "rights_holder_domains", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
 
 
-def run_legislation_monitor(conn):
+def run_legislation_monitor(conn, deadline=None):
     inserted = 0
     checked = 0
     errors = []
     for config in LEGISLATION_MONITORS:
+        if monitor_budget_exhausted(deadline):
+            errors.append({"query": config["id"], "error": "monitor time budget exhausted"})
+            break
         try:
-            for article in request_gdelt_articles(config["query"], max_records=8):
+            for article in request_gdelt_articles(config["query"], max_records=5):
                 checked += 1
                 url = article.get("url") or ""
                 if not url or not is_allowed_monitor_url(url):
@@ -1250,11 +1648,14 @@ def run_legislation_monitor(conn):
     return {"source": "legislation_monitor", "checked": checked, "inserted_review_cards": inserted, "errors": errors}
 
 
-def run_official_rss_monitor(conn):
+def run_official_rss_monitor(conn, deadline=None):
     inserted = 0
     checked = 0
     errors = []
     for source in OFFICIAL_RSS_SOURCES:
+        if monitor_budget_exhausted(deadline):
+            errors.append({"source": source["id"], "error": "monitor time budget exhausted"})
+            break
         try:
             for item in request_rss_items(source["url"])[:12]:
                 checked += 1
@@ -1365,13 +1766,14 @@ def source_health(conn):
 
 def run_monitor():
     now = utc_now()
+    deadline = time.monotonic() + MONITOR_RUN_BUDGET_SECONDS
     with connect() as conn:
         source_rows = rows(conn, "SELECT * FROM sources ORDER BY name")
         monitor_results = [
-            run_gdelt_monitor(conn),
-            run_rights_holder_monitor(conn),
-            run_legislation_monitor(conn),
-            run_official_rss_monitor(conn),
+            run_gdelt_monitor(conn, deadline),
+            run_rights_holder_monitor(conn, deadline),
+            run_legislation_monitor(conn, deadline),
+            run_official_rss_monitor(conn, deadline),
         ]
         run_id = "run_" + now.replace(":", "").replace("+", "Z")
         inserted = sum(item.get("inserted_review_cards", 0) for item in monitor_results)
