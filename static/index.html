@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>欧洲 AI 版权态势监控</title>
-    <link rel="stylesheet" href="/styles.css?v=20260620-live3" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-worldmonitor3" />
   </head>
   <body class="monitor-world">
     <div class="wm-shell">
@@ -22,8 +22,11 @@
           <span id="activeLayerName">诉讼层</span>
           <span id="refreshStatus">同步中</span>
           <span id="sourceCoverage">源 0/0</span>
+          <span>EUROPE</span>
         </div>
         <nav class="wm-actions">
+          <button class="wm-icon-button" type="button" aria-label="搜索">⌕</button>
+          <button class="wm-icon-button" type="button" aria-label="视图">◎</button>
           <a href="/admin.html">后台审核</a>
           <button id="runMonitor">立即同步</button>
         </nav>
@@ -51,6 +54,18 @@
             <button data-evidence="legislation">
               <span>立法动态</span>
               <strong id="metricLegislation">0</strong>
+            </button>
+            <button data-evidence="video">
+              <span>视频情报</span>
+              <strong id="metricVideo">0</strong>
+            </button>
+            <button data-evidence="market">
+              <span>金融影响</span>
+              <strong id="metricMarket">0</strong>
+            </button>
+            <button data-evidence="calendar">
+              <span>风险日历</span>
+              <strong id="metricCalendar">0</strong>
             </button>
           </div>
         </section>
@@ -88,7 +103,7 @@
         <section class="wm-map-stage">
           <div class="wm-map-toolbar">
             <div>
-              <p>Nordic Grey Blue Command Map</p>
+              <p>OSINT COPYRIGHT MAP</p>
               <h2>欧洲版权风险地图</h2>
             </div>
             <div class="wm-map-controls">
@@ -100,6 +115,26 @@
           </div>
 
           <div class="wm-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼、立法与权利人动态地图"></div>
+          <div class="wm-map-modebar" aria-label="地图图层">
+            <button type="button" data-evidence="litigation" class="active">诉讼</button>
+            <button type="button" data-evidence="rights">权利人</button>
+            <button type="button" data-evidence="legislation">立法</button>
+            <button type="button" data-evidence="video">视频</button>
+            <button type="button" data-evidence="market">金融</button>
+            <button type="button" data-evidence="calendar">日历</button>
+            <button type="button" data-evidence="official">官方源</button>
+          </div>
+          <div class="wm-zoom-stack" aria-label="地图缩放">
+            <button type="button">+</button>
+            <button type="button">−</button>
+            <button type="button">⌖</button>
+          </div>
+          <div class="wm-threat-legend" aria-label="风险等级图例">
+            <span><i class="p0"></i>P0</span>
+            <span><i class="p1"></i>P1</span>
+            <span><i class="p2"></i>P2</span>
+            <span><i class="p3"></i>P3</span>
+          </div>
           <div class="wm-live-console">
             <div>
               <span>LIVE FEED</span>
@@ -142,6 +177,9 @@
           <button data-evidence="official">文书</button>
           <button data-evidence="rights">权利人</button>
           <button data-evidence="legislation">立法</button>
+          <button data-evidence="video">视频</button>
+          <button data-evidence="market">金融</button>
+          <button data-evidence="calendar">日历</button>
         </div>
         <div id="intelCards" class="wm-intel-feed"></div>
       </aside>
@@ -160,6 +198,6 @@
       <div id="caseDetail"></div>
     </dialog>
 
-    <script src="/app.js?v=20260620-live3"></script>
+    <script src="/app.js?v=20260620-worldmonitor3"></script>
   </body>
 </html>

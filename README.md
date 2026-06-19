@@ -38,6 +38,9 @@ The monitor loop currently runs every 60 minutes.
 - `GET /api/cases`
 - `GET /api/cases/{id}`
 - `GET /api/documents`
+- `GET /api/video-intel`
+- `GET /api/market-indicators`
+- `GET /api/calendar-events`
 - `POST /api/documents/capture`
 - `GET /api/intel?status=published`
 - `GET /api/admin/intel`
@@ -69,6 +72,13 @@ The repository includes:
 - `rights_holder_statement`: 权利人声明
 - `official_court_document`: 官方法院文件
 - `legislation_update`: 立法动态
+- `video_intelligence`: 官方/权利人视频、听证、采访和活动源
+- `market_indicator`: AI 平台、出版方和权利人相关上市公司延迟行情指标
+- `calendar_event`: 立法节点、听证、投票、判决预期和政策截止日
+
+## WorldMonitor-Style Layers
+
+The main dashboard is a Chinese-first map console with separate layers for litigation, official documents, rights-holder statements, legislation, video intelligence, market indicators, and risk calendar events. The market layer uses Yahoo Finance delayed chart data as a risk-sensitivity signal only; it is not treated as legal evidence.
 
 `POST /api/documents/capture` downloads an official document URL, stores the raw payload under `data/raw`, calculates a SHA-256 hash, and inserts a document row.
 

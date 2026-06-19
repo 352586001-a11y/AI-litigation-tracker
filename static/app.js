@@ -3,6 +3,9 @@ const state = {
   organizations: [],
   documents: [],
   intel: [],
+  video: [],
+  market: [],
+  calendar: [],
   sources: [],
   filter: "all",
   evidence: "litigation",
@@ -19,6 +22,9 @@ const signalTypeLabels = {
   rights_holder_statement: "权利人声明",
   official_court_document: "官方文件/法院文书",
   legislation_update: "立法动态",
+  video_intelligence: "视频情报",
+  market_indicator: "金融指标",
+  calendar_event: "风险日历",
 };
 
 const layerLabels = {
@@ -26,6 +32,9 @@ const layerLabels = {
   official: "官方文书层",
   rights: "权利人发声层",
   legislation: "立法动态层",
+  video: "视频情报层",
+  market: "金融影响层",
+  calendar: "风险日历层",
 };
 
 const jurisdictionLabels = {
@@ -67,11 +76,28 @@ const sourceTypeLabels = {
   policy_monitor: "政策监控",
 };
 
+const marketCategoryLabels = {
+  ai_platform: "AI 平台",
+  ai_infrastructure: "AI 基建",
+  rights_holder: "权利人",
+  publisher: "出版/新闻",
+};
+
+const eventTypeLabels = {
+  legislation_checkpoint: "立法节点",
+  judgment_expected: "判决预期",
+  policy_update: "政策更新",
+  rights_pressure: "权利人压力",
+};
+
 const evidenceTitles = {
   litigation: "诉讼动态有哪些",
   official: "官方诉讼文书有哪些",
   rights: "权利人官方声明与表态",
   legislation: "立法动态有哪些",
+  video: "视频情报有哪些",
+  market: "金融影响指标",
+  calendar: "立法与判决日历",
 };
 
 const litigationKeywords = [
@@ -322,8 +348,63 @@ function getOfficialEvidence() {
   return sortByTimeDesc([...officialIntel, ...documentItems]).filter(inRange).filter(inSelectedJurisdiction);
 }
 
+function getVideoEvidence() {
+  return sortByTimeDesc(
+    state.video.map((item) => ({
+      ...item,
+      evidence_kind: "video",
+      signal_type: "video_intelligence",
+      confidence: item.source_type?.includes("official") ? "official" : "semi_official",
+      sort_date: item.video_date || item.approved_at || item.updated_at || item.created_at,
+      summary: item.summary || "视频源已纳入监控，等待转写和人工摘要。",
+    }))
+  )
+    .filter(inRange)
+    .filter(inSelectedJurisdiction);
+}
+
+function getMarketEvidence() {
+  return state.market.map((item) => {
+    const price = item.last_price == null ? "待同步" : `${Number(item.last_price).toFixed(2)} ${item.currency || "USD"}`;
+    const change = item.change_pct == null ? "暂无日内涨跌" : `${Number(item.change_pct).toFixed(2)}%`;
+    const priority = item.category === "ai_platform" ? "P1" : item.category === "rights_holder" ? "P2" : "P3";
+    return {
+      ...item,
+      evidence_kind: "market",
+      signal_type: "market_indicator",
+      priority,
+      confidence: "media_lead",
+      sort_date: item.last_checked_at || item.updated_at || item.created_at,
+      title: `${item.name} (${item.symbol})`,
+      summary: `${marketCategoryLabels[item.category] || item.category} · ${item.risk_exposure} 当前指标：${price}，涨跌：${change}。`,
+      source_name: item.source_name || "Market data",
+      source_url: item.source_url,
+      tags: `${item.symbol},${item.category},market,copyright risk`,
+    };
+  });
+}
+
+function getCalendarEvidence() {
+  return sortByTimeDesc(
+    state.calendar.map((item) => ({
+      ...item,
+      evidence_kind: "calendar",
+      signal_type: "calendar_event",
+      confidence: item.source_name?.includes("Commission") || item.source_name?.includes("Sénat") ? "official" : "semi_official",
+      sort_date: item.event_date,
+      tags: `${item.event_type},calendar,${item.jurisdiction}`,
+      summary: `${eventTypeLabels[item.event_type] || item.event_type} · ${item.summary}`,
+    }))
+  )
+    .filter(inRange)
+    .filter(inSelectedJurisdiction);
+}
+
 function getEvidenceItems(layer = state.evidence) {
   if (layer === "official") return getOfficialEvidence();
+  if (layer === "video") return getVideoEvidence();
+  if (layer === "market") return getMarketEvidence();
+  if (layer === "calendar") return getCalendarEvidence();
 
   const filtered = state.intel.filter((item) => {
     if (layer === "litigation") return isLitigationSignal(item);
@@ -347,7 +428,9 @@ function getAllSignals() {
     sort_date: doc.document_date || doc.captured_at || doc.created_at,
   }));
   const intelSignals = state.intel.map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at }));
-  return sortByTimeDesc([...intelSignals, ...documentSignals]).filter(inRange);
+  const videoSignals = getVideoEvidence();
+  const calendarSignals = getCalendarEvidence();
+  return sortByTimeDesc([...intelSignals, ...documentSignals, ...videoSignals, ...calendarSignals]).filter(inRange);
 }
 
 function renderMetrics() {
@@ -355,11 +438,17 @@ function renderMetrics() {
   const official = state.documents.length + state.intel.filter((item) => item.signal_type === "official_court_document").length;
   const rights = state.intel.filter(isRightsVoice).length;
   const legislation = state.intel.filter(isLegislationSignal).length;
+  const video = state.video.length;
+  const market = state.market.length;
+  const calendar = state.calendar.length;
 
   $("#metricNews").textContent = litigation;
   $("#metricOfficial").textContent = official;
   $("#metricRights").textContent = rights;
   $("#metricLegislation").textContent = legislation;
+  $("#metricVideo").textContent = video;
+  $("#metricMarket").textContent = market;
+  $("#metricCalendar").textContent = calendar;
   const recentSignals = getAllSignals().filter((item) => {
     const time = new Date(sortDate(item)).getTime();
     return !Number.isNaN(time) && Date.now() - time <= 30 * 24 * 60 * 60 * 1000;
@@ -371,6 +460,9 @@ function renderMetrics() {
     ["P0 对象", state.cases.filter((item) => item.priority === "P0").length],
     ["情报卡", state.intel.length],
     ["官方文书", official],
+    ["视频源", video],
+    ["金融指标", market],
+    ["日历事件", calendar],
     ["30天信号", recentSignals.length],
     ["最近更新", state.lastUpdated ? formatTime(state.lastUpdated) : "--:--"],
   ]
@@ -419,6 +511,9 @@ function renderMap() {
     <div class="wm-source-pin" style="left:46%; top:54%;">Figaro</div>
     <div class="wm-source-pin" style="left:38%; top:52%;">SNE</div>
     <div class="wm-source-pin" style="left:56%; top:30%;">Koda</div>
+    <div class="wm-source-pin video" style="left:69%; top:34%;">Video</div>
+    <div class="wm-source-pin market" style="left:23%; top:69%;">Market</div>
+    <div class="wm-source-pin calendar" style="left:74%; top:60%;">Calendar</div>
     ${points}
   `;
 
@@ -680,18 +775,24 @@ function attachEvents() {
 
 async function load() {
   $("#refreshStatus").textContent = "正在同步";
-  const [cases, organizations, documents, intel, sources] = await Promise.all([
+  const [cases, organizations, documents, intel, sources, video, market, calendar] = await Promise.all([
     api("/api/cases"),
     api("/api/organizations"),
     api("/api/documents"),
     api("/api/intel?status=published"),
     api("/api/source-health").catch(() => []),
+    api("/api/video-intel").catch(() => []),
+    api("/api/market-indicators").catch(() => []),
+    api("/api/calendar-events").catch(() => []),
   ]);
   state.cases = cases;
   state.organizations = organizations;
   state.documents = documents;
   state.intel = intel;
   state.sources = sources;
+  state.video = video;
+  state.market = market;
+  state.calendar = calendar;
   state.lastUpdated = new Date().toISOString();
   state.nextRefreshAt = Date.now() + state.refreshMs;
   $("#refreshStatus").textContent = `同步完成 ${formatTime(state.lastUpdated)}`;

@@ -11,6 +11,9 @@ These sources do not require a user-provided API key and are wired into `POST /a
 | Legislation and policy signals | GDELT DOC 2.0 official-domain queries | Public JSON API | Monitors European Commission, EUR-Lex, France Ministry of Culture, Assemblée nationale and related official domains for AI Act, GPAI, TDM and French copyright policy terms. |
 | Official EU court signals | CURIA/CJEU RSS | RSS | Monitors EU court items for copyright, IP, AI, TDM, authors/publishers terms. |
 | Peripheral official signals | ECHR RSS | RSS | Low-priority property/expression/IP watch. |
+| Video intelligence | European Parliament, Assemblée nationale, SACD, GEMA | Official/rightsholder portals | Tracks hearings, press conferences, interviews, campaign videos and public event pages for later transcription/review. |
+| Market indicators | Yahoo Finance chart endpoint | Public delayed JSON | Tracks AI-platform and rights-holder exposure basket. This is a market-sensitivity signal, not legal evidence. |
+| Risk calendar | Internal calendar + cited official/tracker sources | Seeded event records | Tracks hearings, vote windows, policy deadlines, expected judgments and rights-holder pressure dates. |
 | Manual official capture | `/api/documents/capture` | URL capture | Archives official URLs/PDF/HTML/JSON with SHA-256. |
 
 ## Configured But Requires Your Credentials
@@ -48,6 +51,9 @@ These sources do not require a user-provided API key and are wired into `POST /a
 - SGDL
 - SNE
 - Le Figaro
+- European Parliament Multimedia Centre
+- Assemblée nationale videos
+- Yahoo Finance
 
 ## Official / Policy Domains
 

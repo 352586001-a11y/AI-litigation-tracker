@@ -105,12 +105,70 @@ CREATE TABLE IF NOT EXISTS intelligence_cards (
   approved_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS video_items (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  jurisdiction TEXT NOT NULL,
+  organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
+  case_id TEXT REFERENCES cases(id) ON DELETE SET NULL,
+  priority TEXT NOT NULL CHECK (priority IN ('P0', 'P1', 'P2', 'P3')),
+  status TEXT NOT NULL CHECK (status IN ('watch', 'review', 'published', 'rejected')),
+  video_date TEXT,
+  summary TEXT NOT NULL,
+  tags TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  approved_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS market_indicators (
+  id TEXT PRIMARY KEY,
+  symbol TEXT NOT NULL,
+  name TEXT NOT NULL,
+  market TEXT NOT NULL,
+  category TEXT NOT NULL,
+  jurisdiction TEXT,
+  related_organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
+  risk_exposure TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  last_price REAL,
+  change_pct REAL,
+  currency TEXT,
+  last_checked_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  jurisdiction TEXT NOT NULL,
+  case_id TEXT REFERENCES cases(id) ON DELETE SET NULL,
+  organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
+  priority TEXT NOT NULL CHECK (priority IN ('P0', 'P1', 'P2', 'P3')),
+  event_date TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_cases_priority ON cases(priority, risk_score DESC);
 CREATE INDEX IF NOT EXISTS idx_documents_case ON documents(case_id);
 CREATE INDEX IF NOT EXISTS idx_documents_sha ON documents(sha256);
 CREATE INDEX IF NOT EXISTS idx_sources_checked ON sources(last_checked_at);
 CREATE INDEX IF NOT EXISTS idx_intel_status ON intelligence_cards(status, priority, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_intel_org ON intelligence_cards(organization_id);
+CREATE INDEX IF NOT EXISTS idx_video_status ON video_items(status, priority, video_date DESC);
+CREATE INDEX IF NOT EXISTS idx_market_category ON market_indicators(category, symbol);
+CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_events(event_date, priority);
 
 CREATE VIEW IF NOT EXISTS case_cards AS
 SELECT

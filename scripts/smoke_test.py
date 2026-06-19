@@ -30,6 +30,9 @@ def main():
     intel = get_json("/api/intel?status=published")
     admin_intel = get_json("/api/admin/intel")
     documents = get_json("/api/documents")
+    videos = get_json("/api/video-intel")
+    markets = get_json("/api/market-indicators")
+    calendar = get_json("/api/calendar-events")
     sources = get_json("/api/source-health")
     sacd = get_json("/api/cases/case_watch_sacd_ai")
     monitor_result = urllib.request.Request("http://127.0.0.1:8899/api/monitor/run", method="POST")
@@ -45,6 +48,9 @@ def main():
     assert any(item["id"] == "source_judilibre" for item in sources)
     assert any(item["signal_type"] == "legislation_update" or "AI Act" in item["tags"] for item in intel)
     assert any(item["signal_type"] in {"news", "rights_holder_statement"} for item in admin_intel)
+    assert len(videos) >= 4
+    assert len(markets) >= 10
+    assert len(calendar) >= 4
     assert sacd["priority"] == "P0"
     assert "intelligence" in sacd
     assert run["status"] == "completed"

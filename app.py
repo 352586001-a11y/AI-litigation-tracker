@@ -247,6 +247,141 @@ OFFICIAL_RSS_SOURCES = [
     },
 ]
 
+MARKET_WATCHLIST = [
+    ("market_msft", "MSFT", "Microsoft", "NASDAQ", "ai_platform", "United States", None, "OpenAI strategic partner; exposed to model training, Copilot and enterprise AI copyright risk."),
+    ("market_meta", "META", "Meta Platforms", "NASDAQ", "ai_platform", "United States", None, "Llama training litigation and large-scale corpus risk."),
+    ("market_googl", "GOOGL", "Alphabet", "NASDAQ", "ai_platform", "United States", None, "Search, Gemini and publisher licensing exposure."),
+    ("market_adbe", "ADBE", "Adobe", "NASDAQ", "ai_platform", "United States", None, "Creative tools, Firefly licensing positioning and image-generation copyright risk."),
+    ("market_nvda", "NVDA", "Nvidia", "NASDAQ", "ai_infrastructure", "United States", None, "AI infrastructure bellwether; adjacent IP and AI capex sensitivity."),
+    ("market_gety", "GETY", "Getty Images", "NYSE", "rights_holder", "United States", "org_getty", "Image archive plaintiff and licensing benchmark for visual training data."),
+    ("market_sstk", "SSTK", "Shutterstock", "NYSE", "rights_holder", "United States", None, "Stock media licensing bellwether for training data deals."),
+    ("market_relx", "RELX", "RELX", "NYSE", "rights_holder", "United Kingdom", None, "Professional publishing and data licensing exposure."),
+    ("market_pso", "PSO", "Pearson", "NYSE", "rights_holder", "United Kingdom", None, "Education publishing and book corpus licensing risk."),
+    ("market_nws", "NWS", "News Corp", "NASDAQ", "publisher", "United States", None, "News and publishing licensing/litigation benchmark."),
+]
+
+VIDEO_INTEL_SEEDS = [
+    (
+        "video_ep_ai_act_multimedia",
+        "欧洲议会多媒体中心：AI Act 与版权执行视频源",
+        "European Parliament Multimedia Centre",
+        "https://multimedia.europarl.europa.eu/",
+        "official_video_portal",
+        "European Union",
+        None,
+        "case_eu_tdm_watch",
+        "P1",
+        "watch",
+        "2026-04-23T00:00:00+00:00",
+        "追踪欧洲议会关于 AI Act、GPAI、创作者报酬和版权透明度的发布会、委员会视频和辩论视频，后续可接自动转写摘要。",
+        "video,European Parliament,AI Act,GPAI,copyright,hearing",
+    ),
+    (
+        "video_assemblee_fr_ai_bill",
+        "法国国民议会视频源：AI 内容使用证明法案",
+        "Assemblée nationale vidéos",
+        "https://videos.assemblee-nationale.fr/",
+        "official_video_portal",
+        "France",
+        None,
+        "case_fr_ai_presumption_bill",
+        "P0",
+        "watch",
+        "2026-06-03T00:00:00+00:00",
+        "追踪法国国民议会围绕 Darcos 法案、文化事务委员会、AI 训练透明度和权利人举证推定的会议视频。",
+        "video,Assemblée nationale,Darcos bill,AI,copyright,France",
+    ),
+    (
+        "video_sacd_creator_campaign",
+        "SACD 官方视频/采访源：创作者 AI 版权动员",
+        "SACD",
+        "https://www.sacd.fr/fr/recherche?search_api_fulltext=intelligence%20artificielle",
+        "rights_holder_video",
+        "France",
+        "org_sacd",
+        "case_watch_sacd_ai",
+        "P0",
+        "watch",
+        "2026-05-05T00:00:00+00:00",
+        "追踪 SACD 对 AI 训练、创作者报酬、AI Act 执行和法国举证推定法案的公开视频、采访和活动片段。",
+        "video,SACD,creator campaign,AI,copyright,France",
+    ),
+    (
+        "video_gema_ai_music",
+        "GEMA 官方视频/活动源：AI 音乐版权诉讼",
+        "GEMA",
+        "https://www.gema.de/de/aktuelles/kuenstliche-intelligenz",
+        "rights_holder_video",
+        "Germany",
+        "org_gema",
+        "case_de_gema_suno",
+        "P1",
+        "watch",
+        "2026-03-09T00:00:00+00:00",
+        "追踪 GEMA 关于 OpenAI、Suno、音乐训练数据、歌词复现和生成式音乐授权的公开视频与活动。",
+        "video,GEMA,Suno,OpenAI,AI music,copyright,Germany",
+    ),
+]
+
+CALENDAR_EVENT_SEEDS = [
+    (
+        "cal_sne_statement_2026_06_12",
+        "SNE 对法国政府削弱文化/新闻版权保护发声",
+        "rights_pressure",
+        "France",
+        "case_fr_ai_presumption_bill",
+        "org_sne",
+        "P1",
+        "2026-06-12T00:00:00+00:00",
+        "https://www.sne.fr/actu/pourquoi-le-gouvernement-laisse-t-il-les-deputes-sattaquer-frontalement-a-la-culture-a-la-presse-et-a-la-creation-francaise/",
+        "SNE",
+        "权利人阵营继续围绕 Darcos 法案施压，关注是否引发修正案、投票节点或更强诉讼动员。",
+        "completed",
+    ),
+    (
+        "cal_fr_bill_committee_2026_06_02",
+        "法国 AI 内容使用证明法案获委员会通过",
+        "legislation_checkpoint",
+        "France",
+        "case_fr_ai_presumption_bill",
+        "org_sne",
+        "P0",
+        "2026-06-02T00:00:00+00:00",
+        "https://www.sne.fr/actu/preuve-dutilisation-des-contenus-culturels-par-lia-la-proposition-de-loi-adoptee-en-commission-par-les-deputes/",
+        "SNE",
+        "法国国民议会文化事务委员会通过文本，标志权利人举证推定机制进入更高优先级跟踪。",
+        "completed",
+    ),
+    (
+        "cal_gema_suno_expected_2026_07_31",
+        "GEMA v. Suno 预期判决窗口",
+        "judgment_expected",
+        "Germany",
+        "case_de_gema_suno",
+        "org_gema",
+        "P1",
+        "2026-07-31T00:00:00+00:00",
+        "https://www.taylorwessing.com/en/campaigns/de/2025/ai-and-copyright-tracker",
+        "Taylor Wessing",
+        "Taylor Wessing 跟踪器提示 GEMA v. Suno 判决预期。到期前应升级音乐生成诉讼监控频率。",
+        "upcoming",
+    ),
+    (
+        "cal_gpai_code_update_2026_04_23",
+        "欧委会 GPAI Code 版权章节更新",
+        "policy_update",
+        "European Union",
+        "case_eu_tdm_watch",
+        None,
+        "P1",
+        "2026-04-23T00:00:00+00:00",
+        "https://digital-strategy.ec.europa.eu/en/policies/contents-code-gpai",
+        "European Commission",
+        "GPAI Code 页面更新，继续跟踪 AI Act 第 53 条透明度和版权义务落地。",
+        "completed",
+    ),
+]
+
 NEWS_DOMAIN_ALLOWLIST = {
     "reuters.com": "Reuters",
     "apnews.com": "AP News",
@@ -627,6 +762,9 @@ def seed(conn):
         ("source_cms_ai_tracker", "CMS AI copyright case tracker", "law_firm_tracker", "Europe", "https://cms.law/", "daily", "European AI copyright case tracker used as a legal intelligence discovery layer."),
         ("source_taylor_wessing_ai_tracker", "Taylor Wessing AI copyright tracker", "law_firm_tracker", "Europe", "https://www.taylorwessing.com/", "daily", "European AI and copyright tracker used to discover recent litigation procedural updates."),
         ("source_mishcon_ai_ip_tracker", "Mishcon AI and IP cases tracker", "law_firm_tracker", "Europe", "https://www.mishcon.com/", "weekly", "AI and IP cases tracker used as a secondary litigation intelligence source."),
+        ("source_video_portals", "Official and rights-holder video portals", "video_monitor", "Europe", "European Parliament / Assemblée nationale / SACD / GEMA", "daily", "Video intelligence discovery layer for hearings, press conferences, interviews and webinars."),
+        ("source_market_yahoo", "Yahoo Finance delayed market data", "market_data", "Global", "https://query1.finance.yahoo.com/", "hourly", "Delayed public market data for AI platform and rights-holder exposure basket."),
+        ("source_calendar_watch", "Legislative and judgment calendar", "calendar_watch", "Europe", "Internal event calendar + official sources", "daily", "Calendar layer for hearings, votes, expected judgments and policy deadlines."),
     ]
     conn.executemany(
         """
@@ -845,11 +983,15 @@ def seed(conn):
         ("source_cms_ai_tracker", "CMS AI 版权案件跟踪器", "欧洲 AI 版权诉讼跟踪器，作为近期诉讼程序节点发现源。"),
         ("source_taylor_wessing_ai_tracker", "Taylor Wessing AI 版权跟踪器", "欧洲 AI 与版权案件跟踪器，用于补充近期案件状态和日期。"),
         ("source_mishcon_ai_ip_tracker", "Mishcon AI/IP 案件跟踪器", "AI 与知识产权案件跟踪器，用作次级法律情报源。"),
+        ("source_video_portals", "官方与权利人视频源", "欧洲议会、法国国民议会、SACD、GEMA 等视频/听证/采访源，用于形成视频情报卡。"),
+        ("source_market_yahoo", "Yahoo Finance 延迟市场数据", "AI 平台和权利人风险篮子的公开延迟行情源；仅作为风险敏感度辅助指标，不作为法律证据。"),
+        ("source_calendar_watch", "立法与判决日历", "听证、投票、判决预期和政策截止日监控源。"),
     ]
     conn.executemany(
         "UPDATE sources SET name = ?, notes = ?, updated_at = ? WHERE id = ?",
         [(name, notes, now, source_id) for source_id, name, notes in source_cn],
     )
+    conn.execute("DELETE FROM sources WHERE id = 'source_market_stooq'")
 
     conn.execute("DELETE FROM documents WHERE id IN ('doc_seed_judilibre', 'doc_seed_eurlex')")
 
@@ -876,6 +1018,7 @@ def seed(conn):
         (now,),
     )
     seed_extra_european_ai_litigation(conn, now)
+    seed_worldmonitor_extensions(conn, now)
 
 
 def seed_extra_european_ai_litigation(conn, now):
@@ -1385,6 +1528,104 @@ def seed_extra_european_ai_litigation(conn, now):
     )
 
 
+def seed_worldmonitor_extensions(conn, now):
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO video_items
+        (id, title, source_name, source_url, source_type, jurisdiction, organization_id,
+         case_id, priority, status, video_date, summary, tags, created_at, updated_at, approved_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [row + (now, now, now if row[9] == "published" else None) for row in VIDEO_INTEL_SEEDS],
+    )
+    conn.executemany(
+        """
+        UPDATE video_items
+        SET title = ?, source_name = ?, source_url = ?, source_type = ?, jurisdiction = ?,
+            organization_id = ?, case_id = ?, priority = ?, status = ?, video_date = ?,
+            summary = ?, tags = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        [
+            (
+                title,
+                source_name,
+                source_url,
+                source_type,
+                jurisdiction,
+                organization_id,
+                case_id,
+                priority,
+                status,
+                video_date,
+                summary,
+                tags,
+                now,
+                item_id,
+            )
+            for (
+                item_id,
+                title,
+                source_name,
+                source_url,
+                source_type,
+                jurisdiction,
+                organization_id,
+                case_id,
+                priority,
+                status,
+                video_date,
+                summary,
+                tags,
+            ) in VIDEO_INTEL_SEEDS
+        ],
+    )
+
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO market_indicators
+        (id, symbol, name, market, category, jurisdiction, related_organization_id,
+         risk_exposure, source_name, source_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Yahoo Finance', 'https://finance.yahoo.com/', ?, ?)
+        """,
+        [row + (now, now) for row in MARKET_WATCHLIST],
+    )
+    conn.executemany(
+        """
+        UPDATE market_indicators
+        SET symbol = ?, name = ?, market = ?, category = ?, jurisdiction = ?,
+            related_organization_id = ?, risk_exposure = ?,
+            source_name = 'Yahoo Finance', source_url = 'https://finance.yahoo.com/',
+            updated_at = ?
+        WHERE id = ?
+        """,
+        [(symbol, name, market, category, jurisdiction, org_id, exposure, now, item_id) for item_id, symbol, name, market, category, jurisdiction, org_id, exposure in MARKET_WATCHLIST],
+    )
+
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO calendar_events
+        (id, title, event_type, jurisdiction, case_id, organization_id, priority,
+         event_date, source_url, source_name, summary, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [row + (now, now) for row in CALENDAR_EVENT_SEEDS],
+    )
+    conn.executemany(
+        """
+        UPDATE calendar_events
+        SET title = ?, event_type = ?, jurisdiction = ?, case_id = ?, organization_id = ?,
+            priority = ?, event_date = ?, source_url = ?, source_name = ?,
+            summary = ?, status = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        [
+            (title, event_type, jurisdiction, case_id, org_id, priority, event_date, source_url, source_name, summary, status, now, event_id)
+            for event_id, title, event_type, jurisdiction, case_id, org_id, priority, event_date, source_url, source_name, summary, status in CALENDAR_EVENT_SEEDS
+        ],
+    )
+
+
 def rows(conn, query, params=()):
     return [dict(row) for row in conn.execute(query, params)]
 
@@ -1472,6 +1713,58 @@ def request_rss_items(url):
         if title and link:
             items.append({"title": title, "url": link, "description": description, "date": rss_date_to_iso(pub_date)})
     return items
+
+
+def request_market_quote(symbol):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1d"
+    raw = request_text(url, timeout=MONITOR_HTTP_TIMEOUT)
+    payload = json.loads(raw)
+    result = ((payload.get("chart") or {}).get("result") or [None])[0]
+    if not result:
+        return None
+    meta = result.get("meta") or {}
+    quote = (((result.get("indicators") or {}).get("quote") or [{}])[0]).get("close") or []
+    closes = [float(value) for value in quote if value is not None]
+    if not closes:
+        return None
+    close = closes[-1]
+    open_price = closes[-2] if len(closes) > 1 else meta.get("chartPreviousClose")
+    change_pct = None
+    if open_price:
+        change_pct = round((close - open_price) / open_price * 100, 2)
+    return {
+        "last_price": round(close, 4),
+        "change_pct": change_pct,
+        "currency": meta.get("currency"),
+        "last_checked_at": utc_now(),
+    }
+
+
+def refresh_market_indicators(conn, deadline=None):
+    updated = 0
+    errors = []
+    for item in rows(conn, "SELECT id, symbol FROM market_indicators ORDER BY category, symbol"):
+        if monitor_budget_exhausted(deadline):
+            errors.append({"symbol": item["symbol"], "error": "monitor time budget exhausted"})
+            break
+        try:
+            quote = request_market_quote(item["symbol"])
+            if not quote:
+                errors.append({"symbol": item["symbol"], "error": "no quote"})
+                continue
+            conn.execute(
+                """
+                UPDATE market_indicators
+                SET last_price = ?, change_pct = ?, currency = COALESCE(?, currency, 'USD'),
+                    last_checked_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (quote["last_price"], quote["change_pct"], quote.get("currency"), quote["last_checked_at"], quote["last_checked_at"], item["id"]),
+            )
+            updated += 1
+        except Exception as exc:
+            errors.append({"symbol": item["symbol"], "error": str(exc)[:160]})
+    return {"source": "market_indicators", "checked": updated + len(errors), "updated": updated, "errors": errors}
 
 
 def insert_monitor_card(conn, card):
@@ -1770,6 +2063,7 @@ def run_monitor():
     with connect() as conn:
         source_rows = rows(conn, "SELECT * FROM sources ORDER BY name")
         monitor_results = [
+            refresh_market_indicators(conn, deadline),
             run_gdelt_monitor(conn, deadline),
             run_rights_holder_monitor(conn, deadline),
             run_legislation_monitor(conn, deadline),
@@ -2125,6 +2419,52 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json(source_health(conn))
                 if parsed.path == "/api/documents":
                     return self.send_json(rows(conn, "SELECT * FROM documents ORDER BY captured_at DESC, created_at DESC"))
+                if parsed.path == "/api/video-intel":
+                    return self.send_json(
+                        rows(
+                            conn,
+                            """
+                            SELECT v.*, o.name AS organization_name, c.title AS case_title
+                            FROM video_items v
+                            LEFT JOIN organizations o ON o.id = v.organization_id
+                            LEFT JOIN cases c ON c.id = v.case_id
+                            WHERE v.status IN ('watch', 'published')
+                            ORDER BY COALESCE(v.video_date, v.updated_at, v.created_at) DESC, v.priority
+                            """,
+                        )
+                    )
+                if parsed.path == "/api/market-indicators":
+                    return self.send_json(
+                        rows(
+                            conn,
+                            """
+                            SELECT m.*, o.name AS organization_name
+                            FROM market_indicators m
+                            LEFT JOIN organizations o ON o.id = m.related_organization_id
+                            ORDER BY
+                              CASE m.category
+                                WHEN 'ai_platform' THEN 0
+                                WHEN 'rights_holder' THEN 1
+                                WHEN 'publisher' THEN 2
+                                ELSE 3
+                              END,
+                              m.symbol
+                            """,
+                        )
+                    )
+                if parsed.path == "/api/calendar-events":
+                    return self.send_json(
+                        rows(
+                            conn,
+                            """
+                            SELECT ce.*, o.name AS organization_name, c.title AS case_title
+                            FROM calendar_events ce
+                            LEFT JOIN organizations o ON o.id = ce.organization_id
+                            LEFT JOIN cases c ON c.id = ce.case_id
+                            ORDER BY datetime(ce.event_date) DESC, ce.priority
+                            """,
+                        )
+                    )
                 if parsed.path == "/api/admin/official-sources":
                     return self.send_json(official_source_status(conn))
                 if parsed.path == "/api/intel":
