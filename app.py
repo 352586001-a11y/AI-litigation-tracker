@@ -424,6 +424,14 @@ def utc_now():
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+def parse_iso_date(value):
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except Exception:
+        return datetime.fromtimestamp(0, tz=timezone.utc)
+
+
 def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -1019,6 +1027,39 @@ def seed(conn):
     )
     seed_extra_european_ai_litigation(conn, now)
     seed_worldmonitor_extensions(conn, now)
+    normalize_intelligence_taxonomy(conn)
+
+
+def normalize_intelligence_taxonomy(conn):
+    obsolete_internal_cards = [
+        "intel_de_gema_openai_lawfare_2025_11_12",
+        "intel_de_penguin_openai_cms_2026_03_27",
+    ]
+    litigation_update_cards = [
+        "intel_fr_meta_ap_2025_03_12",
+        "intel_fr_meta_lemonde_2025_03_12",
+        "intel_de_gema_openai_guardian_2025_11_11",
+        "intel_de_gema_suno_musicbusiness_2025_01_21",
+        "intel_uk_getty_stability_reuters_2025_06_25",
+        "intel_de_kneschke_laion_techno_llama_2024_09_27",
+        "intel_de_partec_nvidia_juve_2024_10_28",
+        "intel_dk_koda_suno_official_2025_11_13",
+        "intel_it_perplexity_cms_2025_12_04",
+        "intel_dk_boligportal_taylorwessing_2026_05_12",
+        "intel_de_gema_suno_taylorwessing_2026_03_09",
+    ]
+    conn.executemany("DELETE FROM intelligence_cards WHERE id = ?", [(card_id,) for card_id in obsolete_internal_cards])
+    conn.executemany(
+        "UPDATE intelligence_cards SET signal_type = 'litigation_update' WHERE id = ?",
+        [(card_id,) for card_id in litigation_update_cards],
+    )
+    conn.execute(
+        """
+        UPDATE intelligence_cards
+        SET organization_id = 'org_gema', case_id = 'case_de_gema_openai'
+        WHERE id = 'intel_de_gema_openai_guardian_2025_11_11'
+        """,
+    )
 
 
 def seed_extra_european_ai_litigation(conn, now):
@@ -1230,7 +1271,7 @@ def seed_extra_european_ai_litigation(conn, now):
         (
             "intel_de_gema_suno_musicbusiness_2025_01_21",
             "GEMA 起诉 Suno，AI 音乐生成版权风险升温",
-            "GEMA 针对 Suno 的慕尼黑诉讼被纳入监控，重点关注 AI 音乐生成、训练语料授权和创作者报酬。",
+            "Music Business Worldwide 报道 GEMA 在慕尼黑起诉 Suno，指控 AI 音乐生成涉及未经授权使用受保护曲库，重点关注训练语料授权和创作者报酬。",
             "https://www.musicbusinessworldwide.com/gema-sues-suno-in-germany-for-copyright-infringement-over-ai-generated-music/",
             "Music Business Worldwide",
             "news",
@@ -1248,7 +1289,7 @@ def seed_extra_european_ai_litigation(conn, now):
         (
             "intel_uk_getty_stability_reuters_2025_06_25",
             "Getty v. Stability AI 英国案继续影响图像训练风险",
-            "Getty Images v. Stability AI 被纳入英国诉讼层，作为图像训练、输出水印和商标/版权交叉风险的核心案件。",
+            "Reuters 报道 Getty Images v. Stability AI 英国诉讼出现部分主张变化，继续影响图像训练、输出水印和商标/版权交叉风险。",
             "https://www.reuters.com/legal/transactional/stability-ai-wins-partial-victory-getty-images-uk-lawsuit-2025-06-25/",
             "Reuters",
             "news",
@@ -1266,7 +1307,7 @@ def seed_extra_european_ai_litigation(conn, now):
         (
             "intel_de_kneschke_laion_techno_llama_2024_09_27",
             "Kneschke v. LAION 成为德国 TDM 例外观察案",
-            "Robert Kneschke v. LAION 被纳入德国诉讼层。该案围绕 AI 数据集和文本与数据挖掘例外，是欧盟 AI 训练合规的重要观察点。",
+            "The Technollama 解析 Robert Kneschke v. LAION 一审判决，该案围绕 AI 数据集和文本与数据挖掘例外，是欧盟 AI 训练合规的重要观察点。",
             "https://thetechnollama.wordpress.com/2024/09/27/hamburg-regional-court-rules-on-text-and-data-mining-exception-in-laion-case/",
             "The Technollama",
             "law_firm_statement",
@@ -1283,8 +1324,8 @@ def seed_extra_european_ai_litigation(conn, now):
         ),
         (
             "intel_de_partec_nvidia_juve_2024_10_28",
-            "ParTec v. Nvidia 纳入相邻 AI 知识产权诉讼层",
-            "ParTec v. Nvidia 属于 AI/HPC 专利诉讼，不是版权案，但会影响欧洲 AI 基础设施知识产权风险，因此以 P3 纳入相邻风险层。",
+            "ParTec v. Nvidia 成为相邻 AI 知识产权诉讼观察项",
+            "JUVE Patent 报道 ParTec v. Nvidia 的 UPC 诉讼。该案属于 AI/HPC 专利争议，不是版权案，但会影响欧洲 AI 基础设施知识产权风险。",
             "https://www.juve-patent.com/cases/partecs-upc-lawsuit-against-nvidia-tests-ai-computing-patents/",
             "JUVE Patent",
             "news",
@@ -1446,7 +1487,7 @@ def seed_extra_european_ai_litigation(conn, now):
         (
             "intel_dk_koda_suno_official_2025_11_13",
             "Koda 官方宣布起诉 Suno 盗用丹麦音乐",
-            "Koda 官网宣布对 Suno 提起诉讼，主张 Suno 未经许可使用丹麦艺术家音乐训练并生成高度相似歌曲。该项作为北欧 AI 音乐版权诉讼进入 P1 监控。",
+            "Koda 官网宣布对 Suno 提起诉讼，主张 Suno 未经许可使用丹麦艺术家音乐训练并生成高度相似歌曲。",
             "https://www.koda.dk/en/about-koda/news/koda-sues-us-tech-company-suno-for-stealing-danish-artists-music",
             "Koda",
             "official_site",
@@ -2057,6 +2098,110 @@ def source_health(conn):
     return health
 
 
+def risk_priority_from_score(score):
+    if score >= 92:
+        return "P0"
+    if score >= 78:
+        return "P1"
+    if score >= 62:
+        return "P2"
+    return "P3"
+
+
+def ai_analysis(conn):
+    orgs = rows(conn, "SELECT * FROM organizations ORDER BY priority, risk_score DESC")
+    analysis = []
+    for org in orgs:
+        linked_cases = rows(
+            conn,
+            """
+            SELECT c.*
+            FROM case_organizations co
+            JOIN cases c ON c.id = co.case_id
+            WHERE co.organization_id = ?
+            ORDER BY c.priority, c.risk_score DESC
+            """,
+            (org["id"],),
+        )
+        intel = rows(
+            conn,
+            """
+            SELECT *
+            FROM intelligence_cards
+            WHERE organization_id = ? AND status = 'published'
+            ORDER BY COALESCE(signal_date, approved_at, created_at) DESC
+            """,
+            (org["id"],),
+        )
+        documents = rows(
+            conn,
+            """
+            SELECT d.*
+            FROM documents d
+            JOIN case_organizations co ON co.case_id = d.case_id
+            WHERE co.organization_id = ?
+            ORDER BY COALESCE(d.document_date, d.captured_at, d.created_at) DESC
+            """,
+            (org["id"],),
+        )
+        recent_signals = [
+            item
+            for item in intel
+            if item.get("signal_date") and (datetime.now(timezone.utc) - parse_iso_date(item["signal_date"])).days <= 30
+        ]
+        official_gap = len(linked_cases) > 0 and len(documents) == 0
+        score = min(
+            100,
+            int(org["risk_score"])
+            + min(9, len(linked_cases) * 3)
+            + min(8, len(recent_signals) * 2)
+            + (6 if official_gap else 0)
+            + (7 if org["priority"] == "P0" else 3 if org["priority"] == "P1" else 0),
+        )
+        drivers = []
+        if org["priority"] in {"P0", "P1"}:
+            drivers.append(f"{org['priority']} 监控对象")
+        if linked_cases:
+            drivers.append(f"{len(linked_cases)} 个关联诉讼/监控对象")
+        if recent_signals:
+            drivers.append(f"近 30 天 {len(recent_signals)} 条外部动态")
+        if official_gap:
+            drivers.append("缺少已归档官方文书")
+        if org["category"] in {"rights_org", "cmo", "industry_org", "publisher"}:
+            drivers.append("权利人/出版机构")
+        if not drivers:
+            drivers.append("背景观察对象")
+
+        if official_gap:
+            next_action = "优先补抓法院/官方文书，确认案号、程序阶段和可引用来源。"
+        elif score >= 90:
+            next_action = "保持最高频监控；出现声明、判决或听证节点时直接进入 P0 审核。"
+        elif linked_cases:
+            next_action = "继续跟踪程序节点、判决窗口和权利人后续声明。"
+        else:
+            next_action = "维持低频观察，等待更强诉讼或官方信号。"
+
+        analysis.append(
+            {
+                "organization_id": org["id"],
+                "name": org["name"],
+                "full_name": org["full_name"],
+                "jurisdiction": org["jurisdiction"],
+                "category": org["category"],
+                "base_priority": org["priority"],
+                "risk_score": score,
+                "risk_level": risk_priority_from_score(score),
+                "case_count": len(linked_cases),
+                "recent_signal_count": len(recent_signals),
+                "official_document_count": len(documents),
+                "drivers": drivers,
+                "next_action": next_action,
+                "summary": f"{org['name']} 当前 AI 版权风险评分 {score}/100，主要由{ '、'.join(drivers[:3]) }驱动。",
+            }
+        )
+    return sorted(analysis, key=lambda item: (item["risk_level"], -item["risk_score"], item["name"]))[:12]
+
+
 def run_monitor():
     now = utc_now()
     deadline = time.monotonic() + MONITOR_RUN_BUDGET_SECONDS
@@ -2417,6 +2562,8 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json(rows(conn, "SELECT * FROM sources ORDER BY jurisdiction, name"))
                 if parsed.path == "/api/source-health":
                     return self.send_json(source_health(conn))
+                if parsed.path == "/api/ai-analysis":
+                    return self.send_json(ai_analysis(conn))
                 if parsed.path == "/api/documents":
                     return self.send_json(rows(conn, "SELECT * FROM documents ORDER BY captured_at DESC, created_at DESC"))
                 if parsed.path == "/api/video-intel":

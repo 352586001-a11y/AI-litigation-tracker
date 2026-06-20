@@ -51,6 +51,7 @@ The monitor loop currently runs every 60 minutes.
 - `POST /api/admin/intel/reject`
 - `GET /api/sources`
 - `GET /api/source-health`
+- `GET /api/ai-analysis`
 - `GET /api/monitor/keywords`
 - `POST /api/monitor/run`
 - `POST /api/official-documents/run`
@@ -81,6 +82,8 @@ The repository includes:
 ## WorldMonitor-Style Layers
 
 The main dashboard is a Chinese-first map console with separate layers for litigation, official documents, rights-holder statements, legislation, video intelligence, market indicators, and risk calendar events. The market layer uses Yahoo Finance delayed chart data as a risk-sensitivity signal only; it is not treated as legal evidence.
+
+`/api/ai-analysis` returns rule-based organization and rights-holder risk analysis: score, P0-P3 level, drivers, document gaps, and recommended next action. It is designed so a model-backed analyzer can replace the scoring function later without changing the frontend contract.
 
 `POST /api/documents/capture` downloads an official document URL, stores the raw payload under `data/raw`, calculates a SHA-256 hash, and inserts a document row.
 

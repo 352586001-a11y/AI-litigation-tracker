@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>欧洲 AI 版权态势监控</title>
-    <link rel="stylesheet" href="/styles.css?v=20260620-worldmonitor4" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-worldmonitor6" />
   </head>
   <body class="monitor-world">
     <div class="wm-shell">
@@ -32,6 +32,14 @@
         </nav>
       </header>
 
+      <nav class="wm-command-rail" aria-label="全局模块">
+        <button type="button" class="active" title="全球态势">◎</button>
+        <button type="button" title="诉讼地图">◇</button>
+        <button type="button" title="情报流">≡</button>
+        <button type="button" title="日历">□</button>
+        <button type="button" title="源状态">⌁</button>
+      </nav>
+
       <aside class="wm-left-dock">
         <section class="wm-panel-block">
           <div class="wm-section-title">
@@ -40,7 +48,7 @@
           </div>
           <div class="wm-layer-stack">
             <button data-evidence="litigation" class="active">
-              <span>诉讼动态</span>
+              <span>外部诉讼动态</span>
               <strong id="metricNews">0</strong>
             </button>
             <button data-evidence="official">
@@ -80,6 +88,27 @@
             <button data-range="30d">30 天</button>
             <button data-range="all" class="active">全部</button>
           </div>
+        </section>
+
+        <section class="wm-panel-block">
+          <div class="wm-section-title">
+            <span>RISK SCALE</span>
+            <strong>风险等级定义</strong>
+          </div>
+          <div class="wm-risk-scale">
+            <article><b class="p0"></b><strong>P0</strong><span>法国/SACD/Figaro 等最高优先级，已发生或即将影响诉讼、立法或合规。</span></article>
+            <article><b class="p1"></b><strong>P1</strong><span>已确认案件、官方立法节点或高影响权利人发声。</span></article>
+            <article><b class="p2"></b><strong>P2</strong><span>可信线索、二级法域或需要继续补官方文书的动态。</span></article>
+            <article><b class="p3"></b><strong>P3</strong><span>相邻 AI/IP、市场或政策背景观察项。</span></article>
+          </div>
+        </section>
+
+        <section class="wm-panel-block">
+          <div class="wm-section-title">
+            <span>AI ANALYSIS</span>
+            <strong>机构风险研判</strong>
+          </div>
+          <div class="wm-ai-analysis" id="aiAnalysis"></div>
         </section>
 
         <section class="wm-panel-block">
@@ -153,8 +182,8 @@
 
         <section class="wm-case-dock">
           <div class="wm-section-title">
-            <span>WATCHLIST</span>
-            <strong>诉讼与监控对象</strong>
+            <span>CASE BASE</span>
+            <strong>网站诉讼对象库</strong>
           </div>
           <div class="wm-case-strip" id="cases"></div>
         </section>
@@ -163,13 +192,15 @@
       <aside class="wm-right-dock">
         <div class="wm-intel-head">
           <div>
-            <p>实时简报 · 新到旧</p>
-            <h2 id="evidenceTitle">诉讼动态有哪些</h2>
+            <p>外部动态简报 · 新到旧</p>
+            <h2 id="evidenceTitle">诉讼外部动态</h2>
           </div>
           <div class="filters wm-priority-filter">
             <button data-filter="all" class="active">全部</button>
             <button data-filter="P0">P0</button>
             <button data-filter="P1">P1</button>
+            <button data-filter="P2">P2</button>
+            <button data-filter="P3">P3</button>
           </div>
         </div>
         <div class="wm-evidence-tabs">
@@ -198,6 +229,6 @@
       <div id="caseDetail"></div>
     </dialog>
 
-    <script src="/app.js?v=20260620-worldmonitor4"></script>
+    <script src="/app.js?v=20260620-worldmonitor6"></script>
   </body>
 </html>

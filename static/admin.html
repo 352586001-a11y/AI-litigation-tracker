@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>情报审核后台</title>
-    <link rel="stylesheet" href="/styles.css?v=20260620-admin2" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-admin3" />
   </head>
   <body>
     <header class="topbar">
@@ -30,6 +30,21 @@
         <div id="adminStats" class="ops-stats"></div>
         <div id="monitorRuns" class="monitor-runs"></div>
         <pre id="monitorRunResult" class="run-result" hidden></pre>
+      </section>
+
+      <section class="official-panel">
+        <div class="section-head">
+          <div>
+            <h2>P0-P3 风险等级</h2>
+            <p>风险等级用于排序审核和地图热度，不等于法律结论；官方文书、程序节点和权利人行动会提高等级。</p>
+          </div>
+        </div>
+        <div class="admin-risk-scale">
+          <article><span class="badge P0">P0</span><strong>最高风险</strong><p>法国/SACD/Figaro 等核心权利人或已形成重大诉讼、立法、判决、禁令风险，需立即审核。</p></article>
+          <article><span class="badge P1">P1</span><strong>高风险</strong><p>已确认案件、官方立法节点、主要权利人声明或高影响法院动态，需要每日跟踪。</p></article>
+          <article><span class="badge P2">P2</span><strong>中风险</strong><p>可信线索、次级法域、律所/媒体确认但仍缺官方文书的动态，需要补证。</p></article>
+          <article><span class="badge P3">P3</span><strong>观察项</strong><p>相邻 AI/IP、金融、政策背景或低确定性信号，用于趋势观察。</p></article>
+        </div>
       </section>
 
       <section class="official-panel">
@@ -104,6 +119,7 @@
             情报类型
             <select name="signal_type">
               <option value="news" selected>新闻</option>
+              <option value="litigation_update">诉讼动态</option>
               <option value="law_firm_statement">律所表态</option>
               <option value="rights_holder_statement">权利人声明</option>
               <option value="official_court_document">官方文件/法院文书</option>
@@ -182,6 +198,7 @@
             <select id="typeFilter">
               <option value="all">全部类型</option>
               <option value="news">新闻</option>
+              <option value="litigation_update">诉讼动态</option>
               <option value="law_firm_statement">律所表态</option>
               <option value="rights_holder_statement">权利人声明</option>
               <option value="official_court_document">官方文件/法院文书</option>
@@ -196,6 +213,6 @@
       </section>
     </main>
 
-    <script src="/admin.js?v=20260620-admin2"></script>
+    <script src="/admin.js?v=20260620-admin3"></script>
   </body>
 </html>

@@ -33,6 +33,7 @@ def main():
     videos = get_json("/api/video-intel")
     markets = get_json("/api/market-indicators")
     calendar = get_json("/api/calendar-events")
+    ai_analysis = get_json("/api/ai-analysis")
     sources = get_json("/api/source-health")
     sacd = get_json("/api/cases/case_watch_sacd_ai")
     monitor_result = urllib.request.Request("http://127.0.0.1:8899/api/monitor/run", method="POST")
@@ -52,6 +53,7 @@ def main():
     assert len(videos) >= 4
     assert len(markets) >= 10
     assert len(calendar) >= 4
+    assert ai_analysis and ai_analysis[0]["risk_score"] >= 0
     assert sacd["priority"] == "P0"
     assert "intelligence" in sacd
     assert run["status"] == "completed"

@@ -10,6 +10,7 @@ const adminState = {
 
 const signalTypeLabels = {
   news: "新闻",
+  litigation_update: "诉讼动态",
   law_firm_statement: "律所表态",
   rights_holder_statement: "权利人声明",
   official_court_document: "官方文件/法院文书",

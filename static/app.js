@@ -6,6 +6,7 @@ const state = {
   video: [],
   market: [],
   calendar: [],
+  aiAnalysis: [],
   sources: [],
   filter: "all",
   evidence: "litigation",
@@ -18,6 +19,7 @@ const state = {
 
 const signalTypeLabels = {
   news: "新闻",
+  litigation_update: "诉讼动态",
   law_firm_statement: "律所表态",
   rights_holder_statement: "权利人声明",
   official_court_document: "官方文件/法院文书",
@@ -94,7 +96,7 @@ const eventTypeLabels = {
 };
 
 const evidenceTitles = {
-  litigation: "诉讼动态有哪些",
+  litigation: "诉讼外部动态",
   official: "官方诉讼文书有哪些",
   rights: "权利人官方声明与表态",
   legislation: "立法动态有哪些",
@@ -209,6 +211,7 @@ function displaySignalType(item) {
   if (item.signal_type && ["video_intelligence", "market_indicator", "calendar_event"].includes(item.signal_type)) {
     return signalTypeLabels[item.signal_type];
   }
+  if (item.signal_type === "litigation_update") return "诉讼动态";
   if (item.signal_type === "legislation_update") return "立法动态";
   if (item.signal_type === "rights_holder_statement") return "权利人发声";
   if (isOfficialDocumentSignal(item)) return "官方文书";
@@ -296,6 +299,7 @@ function isLitigationSignal(item) {
   if (isOfficialDocumentSignal(item)) return false;
   if (["video", "market", "calendar"].includes(item.evidence_kind)) return false;
   if (["video_intelligence", "market_indicator", "calendar_event"].includes(item.signal_type)) return false;
+  if (item.signal_type === "litigation_update") return true;
   if (hasLitigationCase(item)) return true;
   if (isLegislationSignal(item)) return false;
   return hasAnyKeyword(signalHaystack(item), litigationKeywords);
@@ -380,6 +384,11 @@ function getMarketEvidence() {
     const price = item.last_price == null ? "待同步" : `${Number(item.last_price).toFixed(2)} ${item.currency || "USD"}`;
     const change = item.change_pct == null ? "暂无日内涨跌" : `${Number(item.change_pct).toFixed(2)}%`;
     const priority = item.category === "ai_platform" ? "P1" : item.category === "rights_holder" ? "P2" : "P3";
+    const linkage = item.category === "ai_platform"
+      ? "作为 AI 模型/产品供给侧，受训练数据透明度、授权成本、诉讼赔偿和禁令风险影响。"
+      : item.category === "rights_holder"
+        ? "作为版权资产或出版内容供给侧，受授权谈判、集体诉讼、AI Act 透明度和 opt-out 执行影响。"
+        : "作为新闻/出版市场观察项，反映内容授权和 AI 版权议价环境。";
     return {
       ...item,
       evidence_kind: "market",
@@ -388,7 +397,7 @@ function getMarketEvidence() {
       confidence: "media_lead",
       sort_date: item.last_checked_at || item.updated_at || item.created_at,
       title: `${item.name} (${item.symbol})`,
-      summary: `${marketCategoryLabels[item.category] || item.category} · ${item.risk_exposure} 当前指标：${price}，涨跌：${change}。`,
+      summary: `${marketCategoryLabels[item.category] || item.category} · ${linkage} 暴露点：${item.risk_exposure} 市场指标：${price}，涨跌：${change}。`,
       source_name: item.source_name || "Market data",
       source_url: item.source_url,
       tags: `${item.symbol},${item.category},market,copyright risk`,
@@ -485,6 +494,25 @@ function renderMetrics() {
   $("#liveHeadline").textContent = getAllSignals()[0]?.title || "等待情报同步";
 }
 
+function renderAiAnalysis() {
+  const target = $("#aiAnalysis");
+  if (!target) return;
+  target.innerHTML = state.aiAnalysis.slice(0, 6).map((item) => `
+    <article class="wm-ai-card ${escapeHtml(item.risk_level || item.base_priority || "P2")}">
+      <div>
+        <span>${escapeHtml(jurisdictionLabels[item.jurisdiction] || item.jurisdiction)}</span>
+        <strong>${escapeHtml(item.name)}</strong>
+      </div>
+      <em>${escapeHtml(item.risk_score)}/100 · ${escapeHtml(item.risk_level)}</em>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="wm-ai-drivers">
+        ${(item.drivers || []).slice(0, 3).map((driver) => `<span>${escapeHtml(driver)}</span>`).join("")}
+      </div>
+      <small>${escapeHtml(item.next_action)}</small>
+    </article>
+  `).join("") || `<div class="empty-state">AI 风险研判加载中。</div>`;
+}
+
 function renderMap() {
   const points = jurisdictions
     .map((item) => {
@@ -542,10 +570,68 @@ function renderIntel() {
   const target = $("#intelCards");
   if (!target) return;
   $("#evidenceTitle").textContent = evidenceTitles[state.evidence];
+  if (state.evidence === "calendar") {
+    target.innerHTML = renderCalendarPlanner();
+    return;
+  }
   const cards = getEvidenceItems().filter((item) => state.filter === "all" || item.priority === state.filter);
   target.innerHTML = cards.length
     ? cards.slice(0, 40).map(renderIntelCard).join("")
     : `<div class="empty-state">当前筛选条件下没有证据卡片。</div>`;
+}
+
+function renderCalendarPlanner() {
+  const items = getCalendarEvidence().filter((item) => state.filter === "all" || item.priority === state.filter);
+  const anchor = items[0]?.event_date ? new Date(items[0].event_date) : new Date();
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i += 1) cells.push({ blank: true });
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dayItems = items.filter((item) => String(item.event_date || "").slice(0, 10) === dateKey);
+    cells.push({ day, dateKey, items: dayItems });
+  }
+  while (cells.length % 7) cells.push({ blank: true });
+  const monthTitle = anchor.toLocaleDateString("zh-CN", { year: "numeric", month: "long" });
+  return `
+    <section class="wm-calendar-planner">
+      <div class="wm-calendar-head">
+        <div>
+          <span>LEGISLATION / JUDGMENT TODO</span>
+          <strong>${escapeHtml(monthTitle)}</strong>
+        </div>
+        <em>${items.length} 个节点</em>
+      </div>
+      <div class="wm-calendar-weekdays">
+        ${["一", "二", "三", "四", "五", "六", "日"].map((day) => `<span>${day}</span>`).join("")}
+      </div>
+      <div class="wm-calendar-grid">
+        ${cells.map((cell) => cell.blank ? `<article class="blank"></article>` : `
+          <article class="${cell.items?.length ? "has-event" : ""}">
+            <strong>${cell.day}</strong>
+            ${(cell.items || []).slice(0, 2).map((item) => `<span class="${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span>`).join("")}
+          </article>
+        `).join("")}
+      </div>
+      <div class="wm-todo-list">
+        ${items.map((item) => `
+          <article class="wm-todo-item ${escapeHtml(item.priority || "P2")}">
+            ${priorityBadge(item.priority || "P2")}
+            <div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <p>${escapeHtml(item.summary || "等待补充说明。")}</p>
+              <span>${escapeHtml(formatDate(item.event_date))} · ${escapeHtml(eventTypeLabels[item.event_type] || item.event_type)} · ${escapeHtml(jurisdictionLabels[item.jurisdiction] || item.jurisdiction)}</span>
+            </div>
+            <a href="${escapeHtml(safeUrl(item.source_url))}" target="_blank" rel="noreferrer">来源</a>
+          </article>
+        `).join("") || `<div class="empty-state">暂无日历待办。</div>`}
+      </div>
+    </section>
+  `;
 }
 
 function renderIntelCard(item) {
@@ -732,6 +818,7 @@ function setEvidence(value) {
 
 function renderAll() {
   renderMetrics();
+  renderAiAnalysis();
   renderMap();
   renderIntel();
   renderCases();
@@ -787,7 +874,7 @@ function attachEvents() {
 
 async function load() {
   $("#refreshStatus").textContent = "正在同步";
-  const [cases, organizations, documents, intel, sources, video, market, calendar] = await Promise.all([
+  const [cases, organizations, documents, intel, sources, video, market, calendar, aiAnalysis] = await Promise.all([
     api("/api/cases"),
     api("/api/organizations"),
     api("/api/documents"),
@@ -796,6 +883,7 @@ async function load() {
     api("/api/video-intel").catch(() => []),
     api("/api/market-indicators").catch(() => []),
     api("/api/calendar-events").catch(() => []),
+    api("/api/ai-analysis").catch(() => []),
   ]);
   state.cases = cases;
   state.organizations = organizations;
@@ -805,6 +893,7 @@ async function load() {
   state.video = video;
   state.market = market;
   state.calendar = calendar;
+  state.aiAnalysis = aiAnalysis;
   state.lastUpdated = new Date().toISOString();
   state.nextRefreshAt = Date.now() + state.refreshMs;
   $("#refreshStatus").textContent = `同步完成 ${formatTime(state.lastUpdated)}`;
