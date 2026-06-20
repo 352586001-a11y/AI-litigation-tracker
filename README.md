@@ -81,7 +81,9 @@ The repository includes:
 
 ## WorldMonitor-Style Layers
 
-The main dashboard is a Chinese-first map console with separate layers for litigation, official documents, rights-holder statements, legislation, video intelligence, market indicators, and risk calendar events. The market layer uses Yahoo Finance delayed chart data as a risk-sensitivity signal only; it is not treated as legal evidence.
+The main dashboard is a Chinese-first map console with separate layers for litigation, official documents, rights-holder statements, legislation, video intelligence, market indicators, and risk calendar events. It also renders live chart cards for P0-P3 distribution, layer mix, jurisdiction heat, source confidence, AI risk scoring, and source coverage. The market layer uses Yahoo Finance delayed chart data as a risk-sensitivity signal only; it is not treated as legal evidence.
+
+Published seed intelligence is source-audited before release: dead links and non-copyright adjacent IP items are removed from the public layers, while official documents such as UK Judiciary PDFs are stored in the documents layer.
 
 `/api/ai-analysis` returns rule-based organization and rights-holder risk analysis: score, P0-P3 level, drivers, document gaps, and recommended next action. It is designed so a model-backed analyzer can replace the scoring function later without changing the frontend contract.
 

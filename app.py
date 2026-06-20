@@ -765,6 +765,8 @@ def seed(conn):
         ("source_sacd", "SACD official site", "official_site", "France", "https://www.sacd.fr/", "daily", "P0 watch source for author-side AI copyright statements."),
         ("source_sne", "SNE official site", "official_site", "France", "https://www.sne.fr/", "daily", "French publishers' association statements on AI training, litigation and copyright legislation."),
         ("source_figaro", "Le Figaro / Groupe Figaro", "publisher_site", "France", "https://www.lefigaro.fr/", "daily", "P0 watch source for litigation, licensing and neighboring-rights signals."),
+        ("source_gema", "GEMA official AI litigation page", "official_site", "Germany", "https://www.gema.de/en/news/ai-and-music/ai-lawsuit", "daily", "Official GEMA page for OpenAI and Suno AI music copyright litigation signals."),
+        ("source_uk_judiciary", "UK Judiciary", "official_portal", "United Kingdom", "https://www.judiciary.uk/", "daily", "Official UK court judgments and press documents for AI copyright litigation."),
         ("source_conseil_etat", "Conseil d'Etat", "official_portal", "France", "https://www.conseil-etat.fr/", "daily", "French official legal opinions and administrative court signals for AI copyright policy."),
         ("source_assemblee", "Assemblée nationale", "official_portal", "France", "https://www.assemblee-nationale.fr/", "daily", "French parliamentary dossiers and amendments for AI copyright legislation."),
         ("source_cms_ai_tracker", "CMS AI copyright case tracker", "law_firm_tracker", "Europe", "https://cms.law/", "daily", "European AI copyright case tracker used as a legal intelligence discovery layer."),
@@ -848,7 +850,7 @@ def seed(conn):
         (
             "intel_sacd_lemonde_ai_summit_2025_02_09",
             "SACD cited in creator pushback before Paris AI summit",
-            "Le Monde reported creator-side pressure over alleged use of protected content by AI systems before the Paris AI summit. SACD remains P0 because statements can quickly translate into lobbying, opt-out pressure or litigation strategy.",
+            "Le Monde reported creator-side pressure over alleged use of protected content by AI systems before the Paris AI summit. SACD remains P0 because statements can quickly translate into lobbying, opt-out pressure or licensing negotiations.",
             "https://www.lemonde.fr/en/economy/article/2025/02/09/ai-manufacturers-have-stolen-all-our-content-how-creators-are-trying-to-assert-their-rights_6737965_19.html",
             "Le Monde",
             "news",
@@ -986,6 +988,8 @@ def seed(conn):
         ("source_sacd", "SACD 官方网站", "SACD 权利人声明和 AI 版权立场的 P0 监控源。"),
         ("source_sne", "SNE 官方网站", "法国出版商协会关于 AI 训练、图书语料、立法和诉讼的权利人发声源。"),
         ("source_figaro", "Le Figaro / Groupe Figaro", "Le Figaro 诉讼、授权、邻接权和新闻语料信号源。"),
+        ("source_gema", "GEMA 官方 AI 诉讼专题", "GEMA 针对 OpenAI/ChatGPT 与 Suno 的音乐版权维权官方入口，用于德国 AI 音乐诉讼动态监控。"),
+        ("source_uk_judiciary", "英国司法官网", "英国法院官方判决和 PDF 文书来源，用于 Getty v. Stability AI 等英国 AI 版权案件。"),
         ("source_conseil_etat", "Conseil d'État", "法国行政最高法院和政府咨询意见来源，重点追踪 AI 内容使用证明和立法意见。"),
         ("source_assemblee", "Assemblée nationale", "法国国民议会议案、委员会和修正案来源，用于追踪 AI 版权立法进度。"),
         ("source_cms_ai_tracker", "CMS AI 版权案件跟踪器", "欧洲 AI 版权诉讼跟踪器，作为近期诉讼程序节点发现源。"),
@@ -1008,7 +1012,7 @@ def seed(conn):
         ("intel_fr_meta_ap_2025_03_12", "法国作者和出版商就 AI 训练起诉 Meta", "AP 报道法国作者和出版商在巴黎针对 Meta 提起诉讼，指控其未经授权使用受版权保护图书训练 Llama。当前标记为法国 P1 诉讼线索，等待官方法院文书或案号确认。"),
         ("intel_fr_meta_lemonde_2025_03_12", "Le Monde 报道法国作者和出版商攻击 Meta 版权侵权", "Le Monde 报道法国作者和出版商围绕 AI 训练对 Meta 发起版权侵权行动。该情报与 AP 报道相互印证，但仍需补齐官方法院文书、案号和程序状态。"),
         ("intel_eu_ai_act_guardian_2025_02_18", "EU AI Act 版权漏洞争议升温", "The Guardian 报道权利人担心 AI Act 在版权和训练透明度方面留下漏洞。该情报归入欧盟层 P1，因为它可能影响训练数据披露、opt-out 和 GPAI 合规预期。"),
-        ("intel_sacd_lemonde_ai_summit_2025_02_09", "巴黎 AI 峰会前 SACD 出现在创作者版权压力报道中", "Le Monde 报道巴黎 AI 峰会前创作者阵营对受保护内容被 AI 使用表达强烈不满。SACD 仍为 P0，因为相关表态可能迅速转化为游说、opt-out 压力或诉讼策略。"),
+        ("intel_sacd_lemonde_ai_summit_2025_02_09", "巴黎 AI 峰会前 SACD 出现在创作者版权压力报道中", "Le Monde 报道巴黎 AI 峰会前创作者阵营对受保护内容被 AI 使用表达强烈不满。SACD 仍为 P0，因为相关表态可能迅速转化为游说、opt-out 压力或授权谈判。"),
         ("intel_eu_ai_act_official_2024_07_12", "EU AI Act 官方文本纳入监控基线", "EUR-Lex 上的 EU AI Act 官方文本被纳入欧盟风险层监控，作为 GPAI 透明度和版权相关合规的法律基线。它不是法院判决，但属于官方法律来源。"),
     ]
     conn.executemany(
@@ -1032,33 +1036,109 @@ def seed(conn):
 
 def normalize_intelligence_taxonomy(conn):
     obsolete_internal_cards = [
+        "intel_eu_ai_act_guardian_2025_02_18",
+        "intel_de_gema_openai_guardian_2025_11_11",
         "intel_de_gema_openai_lawfare_2025_11_12",
-        "intel_de_penguin_openai_cms_2026_03_27",
+        "intel_de_gema_suno_musicbusiness_2025_01_21",
+        "intel_uk_getty_stability_reuters_2025_06_25",
+        "intel_de_partec_nvidia_juve_2024_10_28",
+        "intel_sacd_25000_signatories_2026_04_28",
+        "intel_sacd_culture_sovereignty_2026_05_05",
     ]
     litigation_update_cards = [
         "intel_fr_meta_ap_2025_03_12",
         "intel_fr_meta_lemonde_2025_03_12",
-        "intel_de_gema_openai_guardian_2025_11_11",
-        "intel_de_gema_suno_musicbusiness_2025_01_21",
-        "intel_uk_getty_stability_reuters_2025_06_25",
         "intel_de_kneschke_laion_techno_llama_2024_09_27",
-        "intel_de_partec_nvidia_juve_2024_10_28",
         "intel_dk_koda_suno_official_2025_11_13",
         "intel_it_perplexity_cms_2025_12_04",
         "intel_dk_boligportal_taylorwessing_2026_05_12",
         "intel_de_gema_suno_taylorwessing_2026_03_09",
+        "intel_de_gema_ai_lawsuit_official_2026_06_18",
     ]
     conn.executemany("DELETE FROM intelligence_cards WHERE id = ?", [(card_id,) for card_id in obsolete_internal_cards])
+    conn.execute("DELETE FROM intelligence_cards WHERE id = 'intel_de_penguin_openai_cms_2026_03_27'")
     conn.executemany(
         "UPDATE intelligence_cards SET signal_type = 'litigation_update' WHERE id = ?",
         [(card_id,) for card_id in litigation_update_cards],
     )
+    conn.execute("DELETE FROM case_organizations WHERE case_id = 'case_de_partec_nvidia_upc' OR organization_id = 'org_partec'")
+    conn.execute("DELETE FROM cases WHERE id = 'case_de_partec_nvidia_upc'")
+    conn.execute("DELETE FROM organizations WHERE id = 'org_partec'")
+    now = utc_now()
     conn.execute(
         """
         UPDATE intelligence_cards
-        SET organization_id = 'org_gema', case_id = 'case_de_gema_openai'
-        WHERE id = 'intel_de_gema_openai_guardian_2025_11_11'
+        SET summary = ?,
+            source_url = ?,
+            source_name = ?,
+            source_type = ?,
+            confidence = ?,
+            updated_at = ?
+        WHERE id = 'intel_it_perplexity_cms_2025_12_04'
         """,
+        (
+            "Taylor Wessing AI and Copyright Tracker 将 RTI 与 Medusa Film v. Perplexity 列为意大利 AI 版权诉讼观察项。该项保留为诉讼动态，并等待法院文书或案号补齐。",
+            "https://www.taylorwessing.com/en/campaigns/de/2025/ai-and-copyright-tracker",
+            "Taylor Wessing",
+            "law_firm_tracker",
+            "semi_official",
+            now,
+        ),
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO documents
+        (id, case_id, source_id, title, source_url, document_type, jurisdiction, confidence,
+         document_date, captured_at, sha256, extracted_text, summary_cn, raw_path, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "doc_uk_getty_stability_high_court_2025_11_04",
+            "case_uk_getty_stability",
+            "source_uk_judiciary",
+            "Getty Images v Stability AI - UK High Court judgment PDF",
+            "https://www.judiciary.uk/wp-content/uploads/2025/11/Getty-Images-v-Stability-AI.pdf",
+            "judgment",
+            "United Kingdom",
+            "official",
+            "2025-11-04T00:00:00+00:00",
+            now,
+            stable_hash("uk_judiciary", "getty_stability_ai", "2025-11-04"),
+            "Official UK High Court judgment PDF in Getty Images v Stability AI.",
+            "英国高等法院 Getty Images v Stability AI 官方判决 PDF，作为图像训练、输出标识和版权/商标交叉风险的官方文书来源。",
+            None,
+            now,
+        ),
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO intelligence_cards
+        (id, title, summary, source_url, source_name, source_type, jurisdiction, organization_id,
+         case_id, priority, status, signal_type, tags, confidence, risk_delta,
+         signal_date, created_at, updated_at, approved_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "intel_de_gema_ai_lawsuit_official_2026_06_18",
+            "GEMA 官方 AI 诉讼专题更新 OpenAI 与 Suno 维权信息",
+            "GEMA 官方页面说明其针对 Suno AI 与 OpenAI/ChatGPT 的音乐版权维权行动，包含涉嫌复现、训练使用、创作者补偿和常见问题。该项归入诉讼动态，而不是一般权利人声明。",
+            "https://www.gema.de/en/news/ai-and-music/ai-lawsuit",
+            "GEMA",
+            "official_site",
+            "Germany",
+            "org_gema",
+            "case_de_gema_openai",
+            "P1",
+            "published",
+            "litigation_update",
+            "GEMA,OpenAI,Suno,AI music,copyright,litigation,Germany",
+            "semi_official",
+            9,
+            "2026-06-18T07:25:44+00:00",
+            now,
+            now,
+            now,
+        ),
     )
 
 
@@ -1916,7 +1996,7 @@ def run_rights_holder_monitor(conn, deadline=None):
                     {
                         "id": card_id,
                         "title": title,
-                        "summary": f"权利人/行业组织动态监控命中“{config['query']}”。该信号可能与集体维权、授权谈判、AI 训练透明度或诉讼策略有关，需后台审核。",
+                        "summary": f"权利人/行业组织动态监控命中“{config['query']}”。该信号可能与集体维权、授权谈判、AI 训练透明度或维权策略有关，需后台审核。",
                         "source_url": url,
                         "source_name": source_name,
                         "source_type": "official_site",

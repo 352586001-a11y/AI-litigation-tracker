@@ -257,7 +257,8 @@ body.monitor-world {
 }
 
 .wm-risk-scale,
-.wm-ai-analysis {
+.wm-ai-analysis,
+.wm-chart-deck {
   display: grid;
   gap: 8px;
 }
@@ -370,6 +371,119 @@ body.monitor-world {
   border-radius: 999px;
   color: #dfeff6;
   background: rgba(110, 166, 200, 0.14);
+}
+
+.wm-chart-deck {
+  grid-template-columns: 1fr;
+}
+
+.wm-chart-card {
+  padding: 10px;
+  border: 1px solid rgba(137, 163, 181, 0.20);
+  border-radius: 8px;
+  background: rgba(231, 241, 247, 0.055);
+}
+
+.wm-chart-card > span {
+  display: block;
+  margin-bottom: 3px;
+  color: #8fb0c1;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.wm-chart-card > strong {
+  display: block;
+  margin-bottom: 9px;
+  color: #f5fafc;
+  font-size: 12px;
+}
+
+.wm-chart-bars {
+  display: grid;
+  gap: 7px;
+}
+
+.wm-chart-row {
+  display: grid;
+  grid-template-columns: minmax(54px, 0.9fr) minmax(72px, 1.5fr) 28px;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+}
+
+.wm-chart-row span,
+.wm-chart-row strong {
+  color: #b9cad3;
+  font-size: 10px;
+  font-weight: 850;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wm-chart-row strong {
+  color: #f0f6fa;
+  text-align: right;
+}
+
+.wm-chart-row i,
+.wm-source-gauge i {
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(157, 181, 194, 0.18);
+}
+
+.wm-chart-row b,
+.wm-source-gauge b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #6ea6c8;
+}
+
+.wm-chart-row.P0 b {
+  background: #d64d58;
+}
+
+.wm-chart-row.P1 b {
+  background: #d8a15d;
+}
+
+.wm-chart-row.P2 b,
+.wm-chart-row.geo b {
+  background: #6ea6c8;
+}
+
+.wm-chart-row.P3 b {
+  background: #7fc7b2;
+}
+
+.wm-source-gauge {
+  display: grid;
+  gap: 8px;
+}
+
+.wm-source-gauge strong {
+  color: #f7fbfd;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.wm-source-gauge b {
+  width: var(--source-pct, 0%);
+  background: linear-gradient(90deg, #6ea6c8, #7fc7b2);
+}
+
+.wm-source-gauge em {
+  color: #8fb0c1;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1.45;
 }
 
 .wm-layer-stack,

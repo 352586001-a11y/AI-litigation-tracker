@@ -97,10 +97,10 @@ const eventTypeLabels = {
 
 const evidenceTitles = {
   litigation: "诉讼外部动态",
-  official: "官方诉讼文书有哪些",
+  official: "官方诉讼文书",
   rights: "权利人官方声明与表态",
-  legislation: "立法动态有哪些",
-  video: "视频情报有哪些",
+  legislation: "官方立法与政策动态",
+  video: "视频与听证情报",
   market: "金融影响指标",
   calendar: "立法与判决日历",
 };
@@ -494,6 +494,89 @@ function renderMetrics() {
   $("#liveHeadline").textContent = getAllSignals()[0]?.title || "等待情报同步";
 }
 
+function countBy(items, getKey) {
+  return items.reduce((acc, item) => {
+    const key = getKey(item) || "未分类";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function chartBars(rows, maxValue) {
+  const values = rows.map((row) => Number(row[1] || 0));
+  const max = Math.max(1, Number(maxValue || 0), ...values);
+  return `
+    <div class="wm-chart-bars">
+      ${rows.map(([label, value, tone]) => {
+        const width = Math.max(4, Math.min(100, Number(value || 0) / max * 100));
+        return `
+          <div class="wm-chart-row ${escapeHtml(tone || "")}">
+            <span>${escapeHtml(label)}</span>
+            <i><b style="width:${width}%"></b></i>
+            <strong>${escapeHtml(value)}</strong>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function chartCard(label, title, body) {
+  return `
+    <article class="wm-chart-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(title)}</strong>
+      ${body}
+    </article>
+  `;
+}
+
+function renderChartDeck() {
+  const target = $("#chartDeck");
+  if (!target) return;
+  const signals = getAllSignals().filter(inSelectedJurisdiction);
+  const priorityRows = ["P0", "P1", "P2", "P3"].map((priority) => [
+    priority,
+    signals.filter((item) => (item.priority || "P2") === priority).length,
+    priority,
+  ]);
+  const layerRows = [
+    ["诉讼", getEvidenceItems("litigation").length, "P0"],
+    ["文书", getEvidenceItems("official").length, "P1"],
+    ["权利人", getEvidenceItems("rights").length, "P1"],
+    ["立法", getEvidenceItems("legislation").length, "P2"],
+    ["视频", getEvidenceItems("video").length, "P2"],
+    ["日历", getEvidenceItems("calendar").length, "P3"],
+  ];
+  const jurisdictionRows = Object.entries(countBy(signals, (item) => jurisdictionLabels[item.jurisdiction] || item.jurisdiction))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([label, value]) => [label, value, "geo"]);
+  const confidenceRows = Object.entries(countBy(signals, (item) => confidenceLabels[item.confidence] || item.confidence || "待确认"))
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => [label, value, label.includes("官方") ? "P0" : "P2"]);
+  const aiRows = state.aiAnalysis.slice(0, 5).map((item) => [
+    item.name,
+    item.risk_score,
+    item.risk_level || item.base_priority || "P2",
+  ]);
+  const configuredSources = state.sources.filter((item) => item.configured).length;
+  const totalSources = Math.max(1, state.sources.length);
+  const sourcePct = Math.round(configuredSources / totalSources * 100);
+  target.innerHTML = [
+    chartCard("RISK", "P0-P3 情报分布", chartBars(priorityRows)),
+    chartCard("LAYER", "分类构成", chartBars(layerRows)),
+    chartCard("GEO", "法域热度", chartBars(jurisdictionRows.length ? jurisdictionRows : [["无数据", 0, "P3"]])),
+    chartCard("QUALITY", "来源可信度", chartBars(confidenceRows.length ? confidenceRows : [["待同步", 0, "P3"]])),
+    chartCard("AI SCORE", "机构风险评分", chartBars(aiRows.length ? aiRows : [["加载中", 0, "P3"]], 100)),
+    chartCard(
+      "SOURCE",
+      "监控源接入率",
+      `<div class="wm-source-gauge" style="--source-pct:${sourcePct}%"><strong>${configuredSources}/${state.sources.length}</strong><i><b></b></i><em>${sourcePct}% 已接入，官方 API 凭证缺失源仍显示为待配置。</em></div>`
+    ),
+  ].join("");
+}
+
 function renderAiAnalysis() {
   const target = $("#aiAnalysis");
   if (!target) return;
@@ -819,6 +902,7 @@ function setEvidence(value) {
 function renderAll() {
   renderMetrics();
   renderAiAnalysis();
+  renderChartDeck();
   renderMap();
   renderIntel();
   renderCases();
