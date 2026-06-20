@@ -38,6 +38,7 @@ def main():
     monitor_result = urllib.request.Request("http://127.0.0.1:8899/api/monitor/run", method="POST")
     with urllib.request.urlopen(monitor_result, timeout=60) as response:
         run = json.loads(response.read().decode("utf-8"))
+    monitor_runs = get_json("/api/monitor/runs")
 
     assert health["ok"] is True
     assert len(cases) >= 4
@@ -54,6 +55,7 @@ def main():
     assert sacd["priority"] == "P0"
     assert "intelligence" in sacd
     assert run["status"] == "completed"
+    assert monitor_runs and monitor_runs[0]["status"] == "completed"
 
     print("smoke ok")
     print(f"cases={len(cases)} organizations={len(organizations)} intel={len(intel)} checked_sources={run['checked_sources']}")

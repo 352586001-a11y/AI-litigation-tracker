@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>情报审核后台</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-admin2" />
   </head>
   <body>
     <header class="topbar">
@@ -19,6 +19,19 @@
     </header>
 
     <main>
+      <section class="official-panel ops-panel">
+        <div class="section-head">
+          <div>
+            <h2>实时监控运行台</h2>
+            <p>查看监控队列、最近运行结果和可发布情报。手动运行会抓取新闻、权利人官网、立法动态、官方 RSS 和金融指标。</p>
+          </div>
+          <button id="runMonitor" class="primary">运行全量监控</button>
+        </div>
+        <div id="adminStats" class="ops-stats"></div>
+        <div id="monitorRuns" class="monitor-runs"></div>
+        <pre id="monitorRunResult" class="run-result" hidden></pre>
+      </section>
+
       <section class="official-panel">
         <div class="section-head">
           <div>
@@ -94,6 +107,26 @@
               <option value="law_firm_statement">律所表态</option>
               <option value="rights_holder_statement">权利人声明</option>
               <option value="official_court_document">官方文件/法院文书</option>
+              <option value="legislation_update">立法动态</option>
+              <option value="video_intelligence">视频情报</option>
+              <option value="market_indicator">金融指标</option>
+              <option value="calendar_event">风险日历</option>
+            </select>
+          </label>
+          <label>
+            来源类型
+            <select name="source_type">
+              <option value="manual" selected>手工录入</option>
+              <option value="news">新闻媒体</option>
+              <option value="law_firm_tracker">律所/案件跟踪器</option>
+              <option value="rights_holder_monitor">权利人监控</option>
+              <option value="official_site">官方网站</option>
+              <option value="publisher_site">出版方网站</option>
+              <option value="official_portal">官方门户</option>
+              <option value="official_database">官方数据库</option>
+              <option value="official_rss">官方 RSS</option>
+              <option value="policy_monitor">政策监控</option>
+              <option value="video_monitor">视频监控</option>
             </select>
           </label>
           <div class="form-row">
@@ -113,6 +146,10 @@
           <label>
             组织 ID
             <input name="organization_id" placeholder="org_sacd / org_figaro / org_sgdl" />
+          </label>
+          <label>
+            监控对象 ID
+            <input name="case_id" placeholder="case_watch_sacd_ai / case_fr_ai_presumption_bill" />
           </label>
           <label>
             标签
@@ -148,6 +185,10 @@
               <option value="law_firm_statement">律所表态</option>
               <option value="rights_holder_statement">权利人声明</option>
               <option value="official_court_document">官方文件/法院文书</option>
+              <option value="legislation_update">立法动态</option>
+              <option value="video_intelligence">视频情报</option>
+              <option value="market_indicator">金融指标</option>
+              <option value="calendar_event">风险日历</option>
             </select>
           </div>
           <div id="adminCards" class="admin-cards"></div>
@@ -155,6 +196,6 @@
       </section>
     </main>
 
-    <script src="/admin.js"></script>
+    <script src="/admin.js?v=20260620-admin2"></script>
   </body>
 </html>

@@ -74,6 +74,9 @@ const sourceTypeLabels = {
   rights_holder_monitor: "权利人监控",
   official_rss: "官方 RSS",
   policy_monitor: "政策监控",
+  video_monitor: "视频监控",
+  market_data: "金融数据",
+  calendar_watch: "风险日历",
 };
 
 const marketCategoryLabels = {
@@ -203,6 +206,11 @@ function priorityBadge(priority) {
 }
 
 function displaySignalType(item) {
+  if (item.signal_type && ["video_intelligence", "market_indicator", "calendar_event"].includes(item.signal_type)) {
+    return signalTypeLabels[item.signal_type];
+  }
+  if (item.signal_type === "legislation_update") return "立法动态";
+  if (item.signal_type === "rights_holder_statement") return "权利人发声";
   if (isOfficialDocumentSignal(item)) return "官方文书";
   if (isLitigationSignal(item)) return "诉讼动态";
   if (isRightsVoice(item)) return "权利人发声";
@@ -286,6 +294,8 @@ function isOfficialDocumentSignal(item) {
 
 function isLitigationSignal(item) {
   if (isOfficialDocumentSignal(item)) return false;
+  if (["video", "market", "calendar"].includes(item.evidence_kind)) return false;
+  if (["video_intelligence", "market_indicator", "calendar_event"].includes(item.signal_type)) return false;
   if (hasLitigationCase(item)) return true;
   if (isLegislationSignal(item)) return false;
   return hasAnyKeyword(signalHaystack(item), litigationKeywords);
@@ -305,6 +315,8 @@ function isRightsVoice(item) {
 
 function isLegislationSignal(item) {
   if (isOfficialDocumentSignal(item)) return false;
+  if (["video", "market", "calendar"].includes(item.evidence_kind)) return false;
+  if (["video_intelligence", "market_indicator", "calendar_event"].includes(item.signal_type)) return false;
   if (hasLitigationCase(item)) return false;
   if (item.signal_type === "rights_holder_statement") return false;
   const haystack = signalHaystack(item);

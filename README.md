@@ -23,6 +23,8 @@ Admin review console:
 http://127.0.0.1:8876/admin.html
 ```
 
+The admin console includes monitor run history, source health, review queue filters, manual card creation, official document capture, and publish/reject controls. Published cards are synced to the public dashboard automatically on the next refresh.
+
 Start the 24h monitor loop:
 
 ```powershell
