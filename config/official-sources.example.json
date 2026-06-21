@@ -28,5 +28,12 @@
     "enabled": true,
     "search_url": "https://curia.europa.eu/",
     "query_limit": 5
+  },
+  "courtlistener": {
+    "enabled": true,
+    "search_url": "https://www.courtlistener.com/api/rest/v4/",
+    "bearer_token": "PASTE_COURTLISTENER_API_TOKEN_HERE",
+    "query_limit": 25,
+    "recap_limit": 25
   }
 }

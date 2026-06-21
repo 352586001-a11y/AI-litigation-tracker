@@ -1,6 +1,6 @@
-# Europe AI Copyright Risk Tracker
+# Global AI Copyright Risk Tracker
 
-Prototype monitoring database, API, and dashboard for European AI copyright litigation risk, with France as the first-class jurisdiction.
+Monitoring database, API, and black WorldMonitor-style dashboard for global AI copyright litigation and legislation risk. Europe remains a first-class selectable region, with France/SACD/Figaro treated as P0 monitoring targets.
 
 ## Run
 
@@ -33,6 +33,17 @@ powershell -ExecutionPolicy Bypass -File .\start-monitor.ps1
 
 The monitor loop currently runs every 60 minutes.
 
+## Global Case Map
+
+The dashboard now defaults to a global copyright litigation map and supports region filters for:
+
+- 全球
+- 欧洲
+- 美洲
+- 亚太
+
+The backend imports the embedded AI Copyright Case Tracker data from `https://chatgptiseatingtheworld.com/aicopyrightcasetracker/`, including CourtListener docket links and decision/document links. The current import covers global U.S., European, Canadian, Chinese, Korean, Japanese, Indian, Brazilian and other tracker cases.
+
 ## API
 
 - `GET /api/health`
@@ -56,6 +67,18 @@ The monitor loop currently runs every 60 minutes.
 - `POST /api/monitor/run`
 - `POST /api/official-documents/run`
 
+## CourtListener / RECAP
+
+CourtListener API access is configured through:
+
+```text
+COURTLISTENER_API_TOKEN
+```
+
+Without this token, the app still imports all public docket/document links exposed by the AI Copyright Case Tracker. With the token, `/api/official-documents/run` also calls CourtListener/RECAP APIs to enrich the database with public RECAP documents.
+
+Safety boundary: the current implementation only reads already-public CourtListener/RECAP records. It does not call RECAP Fetch or any PACER purchase endpoint.
+
 ## Deployment
 
 See [DEPLOYMENT.md](DEPLOYMENT.md).
@@ -64,9 +87,13 @@ See [Data Sources](docs/data-sources.md) for the configured monitoring sources a
 The repository includes:
 
 - `Dockerfile` for Render Docker deployment
-- `render.yaml` for a web service and hourly cron
+- `render.yaml` for a web service, a 1 GB persistent SQLite disk, and hourly cron
 - `.github/workflows/monitor.yml` for GitHub Actions monitoring
 - `scripts/run_monitor_once.py` for triggering the deployed monitor
+
+For Render, keep `TRACKER_DB_PATH=/var/data/tracker.db` so approved cards, imported cases, and document records survive service restarts. Add `COURTLISTENER_API_TOKEN` in the Render service environment after you generate the token.
+
+For GitHub Actions, set repository secret `TRACKER_BASE_URL` to the deployed Render URL. The workflow runs hourly and calls both `/api/monitor/run` and `/api/official-documents/run`, so it continues while your computer is off.
 
 ## Intelligence Types
 
@@ -81,7 +108,7 @@ The repository includes:
 
 ## WorldMonitor-Style Layers
 
-The main dashboard is a Chinese-first map console with separate layers for litigation, official documents, rights-holder statements, legislation, video intelligence, market indicators, and risk calendar events. It also renders live chart cards for P0-P3 distribution, layer mix, jurisdiction heat, source confidence, AI risk scoring, and source coverage. The market layer uses Yahoo Finance delayed chart data as a risk-sensitivity signal only; it is not treated as legal evidence.
+The main dashboard is a Chinese-first black map console with separate layers for litigation, official documents, rights-holder statements, legislation, video intelligence, market indicators, and risk calendar events. It also renders live chart cards for P0-P3 distribution, layer mix, jurisdiction heat, source confidence, AI risk scoring, and source coverage. The market layer uses Yahoo Finance delayed chart data as a risk-sensitivity signal only; it is not treated as legal evidence.
 
 Published seed intelligence is source-audited before release: dead links and non-copyright adjacent IP items are removed from the public layers, while official documents such as UK Judiciary PDFs are stored in the documents layer.
 
@@ -102,7 +129,7 @@ The monitor runner currently ships with official-source connector stubs, determi
 ```powershell
 git init
 git add .
-git commit -m "Build Europe AI copyright risk tracker"
+git commit -m "Build global AI copyright risk tracker"
 git branch -M main
 git remote add origin <your-github-repo-url>
 git push -u origin main

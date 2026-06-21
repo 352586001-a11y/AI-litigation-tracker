@@ -33,6 +33,10 @@ const confidenceLabels = {
 };
 
 const jurisdictionLabels = {
+  Global: "全球",
+  "United States": "美国",
+  Canada: "加拿大",
+  Brazil: "巴西",
   France: "法国",
   Germany: "德国",
   "European Union": "欧盟",
@@ -40,6 +44,10 @@ const jurisdictionLabels = {
   Netherlands: "荷兰",
   Denmark: "丹麦",
   Italy: "意大利",
+  China: "中国",
+  Japan: "日本",
+  "South Korea": "韩国",
+  India: "印度",
   "Council of Europe": "欧洲委员会",
 };
 
@@ -51,6 +59,7 @@ const sourceTypeLabels = {
   official_portal: "官方门户",
   official_database: "官方数据库",
   official_api: "官方 API",
+  official_archive_api: "法院归档 API",
   law_firm_tracker: "律所/案件跟踪器",
   news_index: "新闻索引",
   rights_holder_monitor: "权利人监控",
@@ -166,7 +175,7 @@ function renderOfficialSources() {
           <div class="case-meta">
             <span class="pill">${status}</span>
             <span class="pill">${jurisdictionLabels[item.jurisdiction] || item.jurisdiction}</span>
-            <span class="pill">${item.kind}</span>
+            <span class="pill">${sourceTypeLabels[item.kind] || item.kind}</span>
           </div>
           <h3>${item.name}</h3>
           <p>${item.notes}</p>

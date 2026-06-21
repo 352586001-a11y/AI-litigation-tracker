@@ -50,3 +50,27 @@
 用途：欧盟法院和普通法院案件、意见、新闻稿。当前已列入官方入口源，后续可接入案件检索或新闻稿/RSS。
 
 入口：https://curia.europa.eu/
+
+## CourtListener / RECAP
+
+用途：全球 AI 版权诉讼的公开 docket、docket entries 与 RECAP 文书同步。系统目前只同步已经公开的 CourtListener/RECAP 数据，不会自动触发 PACER 付费抓取。
+
+配置方式：
+
+1. 注册或登录 CourtListener：https://www.courtlistener.com/sign-in/
+2. 在 CourtListener 账号设置中生成 API token。
+3. 本地可复制 `config/official-sources.example.json` 为 `config/official-sources.local.json`，填写 `courtlistener.bearer_token`。
+4. 部署到 Render/GitHub Actions 时，建议设置环境变量 `COURTLISTENER_API_TOKEN`。
+5. 运行 `POST /api/official-documents/run` 后，系统会先从 AI Copyright Case Tracker 导入全球案件与文书链接，再用 CourtListener API 补充公开 RECAP 文书。
+
+费用边界：
+
+- 当前实现只读 CourtListener/RECAP 已公开数据。
+- 未调用 RECAP Fetch/PACER 购买接口。
+- 如未来需要自动购买 PACER 文书，必须单独增加明确开关和费用保护。
+
+## AI Copyright Case Tracker
+
+用途：把 `https://chatgptiseatingtheworld.com/aicopyrightcasetracker/` 嵌入的 Netlify tracker 作为发现源，自动解析其中维护的美国、欧洲、亚太及其他全球 AI 版权案件，并导入 `docket`、`decision`、`decision2` 等文书链接。
+
+注意：该源本身不是实时 API，而是公开前端静态数据。我们的系统会定时重新拉取页面并比较入库，用它补齐案件地图和文书线索；真正的 docket/RECAP 增量由 CourtListener API 负责。

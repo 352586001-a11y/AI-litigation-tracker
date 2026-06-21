@@ -5,6 +5,15 @@ services:
     plan: free
     autoDeploy: true
     healthCheckPath: /api/health
+    disk:
+      name: tracker-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: TRACKER_DB_PATH
+        value: /var/data/tracker.db
+      - key: COURTLISTENER_API_TOKEN
+        sync: false
 
   - type: cron
     name: ai-litigation-monitor-hourly
@@ -14,4 +23,6 @@ services:
     dockerCommand: "python scripts/run_monitor_once.py $TRACKER_BASE_URL"
     envVars:
       - key: TRACKER_BASE_URL
+        sync: false
+      - key: COURTLISTENER_API_TOKEN
         sync: false

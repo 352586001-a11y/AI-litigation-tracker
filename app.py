@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -12,19 +13,22 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "data" / "tracker.db"
+DB_PATH = Path(os.environ.get("TRACKER_DB_PATH", str(BASE_DIR / "data" / "tracker.db"))).expanduser()
+if not DB_PATH.is_absolute():
+    DB_PATH = BASE_DIR / DB_PATH
 STATIC_DIR = BASE_DIR / "static"
 CONFIG_DIR = BASE_DIR / "config"
 OFFICIAL_CONFIG_PATH = CONFIG_DIR / "official-sources.local.json"
 MONITOR_HTTP_TIMEOUT = float(os.environ.get("MONITOR_HTTP_TIMEOUT", "1.8"))
 MONITOR_RSS_TIMEOUT = float(os.environ.get("MONITOR_RSS_TIMEOUT", "4"))
 MONITOR_RUN_BUDGET_SECONDS = float(os.environ.get("MONITOR_RUN_BUDGET_SECONDS", "38"))
+AI_COPYRIGHT_TRACKER_URL = "https://ai-copyright-lawsuit-tracker.netlify.app/"
 
 OFFICIAL_SOURCE_CONFIGS = {
     "source_judilibre": {
@@ -66,6 +70,16 @@ OFFICIAL_SOURCE_CONFIGS = {
         "default_search_url": "https://curia.europa.eu/",
         "registration_url": "https://curia.europa.eu/",
         "notes": "欧盟法院官方门户。当前列为官方入口归档源，后续接新闻稿/RSS/检索。",
+    },
+    "source_courtlistener": {
+        "label": "CourtListener / RECAP",
+        "jurisdiction": "Global",
+        "kind": "official_archive_api",
+        "credential_key": "COURTLISTENER_API_TOKEN",
+        "config_key": "courtlistener",
+        "default_search_url": "https://www.courtlistener.com/api/rest/v4/",
+        "registration_url": "https://www.courtlistener.com/sign-in/",
+        "notes": "Free Law Project 的 CourtListener/RECAP API。填入 COURTLISTENER_API_TOKEN 后可同步已公开 docket entries 与 RECAP 文书；不会自动发起 PACER 付费抓取。",
     },
 }
 
@@ -530,13 +544,13 @@ def official_source_status(conn):
     return status_rows
 
 
-def request_json(url, token="", headers=None, payload=None, timeout=30):
+def request_json(url, token="", headers=None, payload=None, timeout=30, token_scheme="Bearer"):
     request_headers = {
         "Accept": "application/json",
         "User-Agent": "AI-Copyright-Risk-Tracker/0.1",
     }
     if token:
-        request_headers["Authorization"] = f"Bearer {token}"
+        request_headers["Authorization"] = f"{token_scheme} {token}"
     if headers:
         request_headers.update(headers)
     data = None
@@ -629,6 +643,475 @@ def normalize_judilibre_item(item, query):
         "extracted_text": text,
         "summary_cn": summary,
         "raw_payload": item,
+    }
+
+
+def extract_js_array_segment(source, variable_name):
+    marker = f"const {variable_name} = ["
+    start = source.find(marker)
+    if start < 0:
+        return ""
+    bracket_start = source.find("[", start)
+    depth = 0
+    in_string = False
+    escape = False
+    for index in range(bracket_start, len(source)):
+        char = source[index]
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+            if depth == 0:
+                return source[bracket_start + 1 : index]
+    return ""
+
+
+def parse_tracker_case_line(line):
+    if not re.search(r"\{\s*id\s*:", line):
+        return None
+    fields = {
+        key: unescape(value.replace("\\&", "&").replace('\\"', '"'))
+        for key, value in re.findall(r"(\w+)\s*:\s*\"((?:\\.|[^\"\\])*)\"", line)
+    }
+    id_match = re.search(r"\bid\s*:\s*(\"[^\"]+\"|[^,}\s]+)", line)
+    if id_match:
+        fields["id"] = id_match.group(1).strip().strip('"')
+    duplicate_match = re.search(r"\bduplicate\s*:\s*true", line)
+    fields["duplicate"] = bool(duplicate_match)
+    return fields if fields.get("name") else None
+
+
+def iter_tracker_cases(page_text):
+    for variable_name, bucket in (("CASES", "us"), ("WORLD_CASES", "world")):
+        segment = extract_js_array_segment(page_text, variable_name)
+        for raw_line in segment.splitlines():
+            item = parse_tracker_case_line(raw_line)
+            if item:
+                item["_bucket"] = bucket
+                yield item
+
+
+def slugify(value):
+    cleaned = re.sub(r"[^a-z0-9]+", "_", str(value or "").lower()).strip("_")
+    return cleaned[:80] or stable_hash(value)[:12]
+
+
+def tracker_case_id(item):
+    return f"case_tracker_{item.get('_bucket', 'world')}_{slugify(item.get('id'))}"
+
+
+def tracker_jurisdiction(item):
+    if item.get("_bucket") == "us":
+        return "United States"
+    return item.get("country") or "Global"
+
+
+def tracker_region(jurisdiction):
+    if jurisdiction in {"France", "Germany", "United Kingdom", "Denmark", "Netherlands", "Italy", "European Union"}:
+        return "Europe"
+    if jurisdiction in {"China", "Japan", "South Korea", "India"}:
+        return "APAC"
+    if jurisdiction in {"United States", "Canada", "Brazil"}:
+        return "Americas"
+    return "Global"
+
+
+def tracker_case_status(status):
+    normalized = str(status or "").lower()
+    if normalized in {"dismissed", "settled", "closed"}:
+        return "CLOSED"
+    if normalized in {"active", "appeal"}:
+        return "CASE"
+    return "LEAD"
+
+
+def tracker_priority(item):
+    jurisdiction = tracker_jurisdiction(item)
+    status = str(item.get("status") or "").lower()
+    claims = str(item.get("claims") or "").lower()
+    if jurisdiction in {"France"}:
+        return "P0"
+    if jurisdiction in {"Germany", "European Union", "United Kingdom", "United States"}:
+        return "P1"
+    if status == "active" or "copyright" in claims:
+        return "P2"
+    return "P3"
+
+
+def tracker_risk_score(item):
+    priority = tracker_priority(item)
+    base = {"P0": 94, "P1": 84, "P2": 70, "P3": 52}[priority]
+    status = str(item.get("status") or "").lower()
+    claims = str(item.get("claims") or "").lower()
+    if status == "active":
+        base += 4
+    if "training" in claims or "tdm" in claims or "copyright" in claims:
+        base += 3
+    if item.get("decision") or item.get("docket"):
+        base += 2
+    return min(99, base)
+
+
+def tracker_source_name(url):
+    host = urlparse(url).netloc.lower().replace("www.", "")
+    if "courtlistener.com" in host:
+        return "CourtListener / RECAP"
+    if "nationalarchives.gov.uk" in host:
+        return "UK National Archives"
+    if "chatgptiseatingtheworld.com" in host:
+        return "AI Copyright Case Tracker"
+    if "koda.dk" in host:
+        return "Koda"
+    return NEWS_DOMAIN_ALLOWLIST.get(host, host or "External source")
+
+
+def tracker_document_confidence(url):
+    host = urlparse(url).netloc.lower()
+    if "storage.courtlistener.com" in host or "courtlistener.com" in host:
+        return "official"
+    if "nationalarchives.gov.uk" in host or "judiciary.uk" in host:
+        return "official"
+    if "chatgptiseatingtheworld.com" in host:
+        return "semi_official"
+    return "media_lead"
+
+
+def tracker_document_date(url, label=""):
+    text = f"{url} {label}"
+    match = re.search(r"/(20\d{2})/(0[1-9]|1[0-2])/", text)
+    if match:
+        return f"{match.group(1)}-{match.group(2)}-01T00:00:00+00:00"
+    match = re.search(r"(20\d{2})[-_ ](0[1-9]|1[0-2])[-_ ]([0-3]\d)", text)
+    if match:
+        return f"{match.group(1)}-{match.group(2)}-{match.group(3)}T00:00:00+00:00"
+    return None
+
+
+def tracker_document_type(field_name, url):
+    if field_name.startswith("docket") and ".pdf" not in url.lower():
+        return "docket"
+    if ".pdf" in url.lower() or "decision" in field_name.lower():
+        return "court_decision"
+    return "case_reference"
+
+
+def tracker_documents_for_case(case_id, item):
+    documents = []
+    for index in range(1, 10):
+        suffix = "" if index == 1 else str(index)
+        for field_name in (f"docket{suffix}", f"decision{suffix}"):
+            url = item.get(field_name)
+            if not url or not url.startswith("http"):
+                continue
+            label = item.get(f"{field_name}Label") or ("Docket" if field_name.startswith("docket") else "Decision")
+            document_type = tracker_document_type(field_name, url)
+            source_id = "source_courtlistener" if "courtlistener.com" in urlparse(url).netloc.lower() else "source_ai_copyright_tracker"
+            documents.append(
+                {
+                    "id": f"doc_tracker_{stable_hash(case_id, field_name, url)[:18]}",
+                    "case_id": case_id,
+                    "source_id": source_id,
+                    "title": f"{item.get('name')} - {label}",
+                    "source_url": url,
+                    "document_type": document_type,
+                    "jurisdiction": tracker_jurisdiction(item),
+                    "confidence": tracker_document_confidence(url),
+                    "document_date": tracker_document_date(url, label),
+                    "sha256": stable_hash("tracker", case_id, field_name, url),
+                    "summary_cn": f"从 AI Copyright Case Tracker 导入的{label}链接。案件：{item.get('name')}；来源：{tracker_source_name(url)}；分类：{document_type}。",
+                }
+            )
+    return documents
+
+
+def upsert_tracker_case(conn, item):
+    now = utc_now()
+    case_id = tracker_case_id(item)
+    jurisdiction = tracker_jurisdiction(item)
+    court = item.get("district") or item.get("court")
+    procedural_stage = item.get("status") or "tracked"
+    summary_bits = [
+        item.get("note"),
+        f"Claims: {item.get('claims')}" if item.get("claims") else "",
+        f"Defendant: {item.get('defendant')}" if item.get("defendant") else "",
+        f"Source region: {tracker_region(jurisdiction)}",
+    ]
+    summary = "；".join(bit for bit in summary_bits if bit) or "Imported from AI Copyright Case Tracker."
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO cases
+        (id, title, jurisdiction, court, case_number, ecli, status, procedural_stage,
+         claim_types, ai_systems, risk_score, priority, summary, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            case_id,
+            item.get("name"),
+            jurisdiction,
+            court,
+            None,
+            None,
+            tracker_case_status(item.get("status")),
+            procedural_stage,
+            item.get("claims") or item.get("type") or "copyright",
+            item.get("defendant"),
+            tracker_risk_score(item),
+            tracker_priority(item),
+            summary,
+            now,
+            now,
+        ),
+    )
+    conn.execute(
+        """
+        UPDATE cases
+        SET title = ?, jurisdiction = ?, court = ?, status = ?, procedural_stage = ?,
+            claim_types = ?, ai_systems = ?, risk_score = ?, priority = ?, summary = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            item.get("name"),
+            jurisdiction,
+            court,
+            tracker_case_status(item.get("status")),
+            procedural_stage,
+            item.get("claims") or item.get("type") or "copyright",
+            item.get("defendant"),
+            tracker_risk_score(item),
+            tracker_priority(item),
+            summary,
+            now,
+            case_id,
+        ),
+    )
+    return case_id
+
+
+def upsert_tracker_document(conn, document):
+    now = utc_now()
+    before = conn.total_changes
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO documents
+        (id, case_id, source_id, title, source_url, document_type, jurisdiction, confidence,
+         document_date, captured_at, sha256, ecli, case_number, extracted_text, summary_cn, raw_path, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            document["id"],
+            document["case_id"],
+            document["source_id"],
+            document["title"],
+            document["source_url"],
+            document["document_type"],
+            document["jurisdiction"],
+            document["confidence"],
+            document.get("document_date"),
+            now,
+            document["sha256"],
+            None,
+            None,
+            document.get("extracted_text", ""),
+            document["summary_cn"],
+            None,
+            now,
+        ),
+    )
+    return conn.total_changes > before
+
+
+def run_ai_copyright_tracker_connector(conn, deadline=None):
+    try:
+        page_text = request_text(AI_COPYRIGHT_TRACKER_URL, timeout=30)
+    except Exception as exc:
+        return {"source_id": "source_ai_copyright_tracker", "status": "error", "error": str(exc)[:300]}
+
+    cases_seen = 0
+    documents_seen = 0
+    documents_upserted = 0
+    errors = []
+    for item in iter_tracker_cases(page_text):
+        if monitor_budget_exhausted(deadline):
+            errors.append({"stage": "tracker_import", "error": "monitor time budget exhausted"})
+            break
+        try:
+            case_id = upsert_tracker_case(conn, item)
+            cases_seen += 1
+            for document in tracker_documents_for_case(case_id, item):
+                documents_seen += 1
+                if upsert_tracker_document(conn, document):
+                    documents_upserted += 1
+        except Exception as exc:
+            errors.append({"case": item.get("name"), "error": str(exc)[:240]})
+
+    now = utc_now()
+    conn.execute(
+        "UPDATE sources SET last_checked_at = ?, updated_at = ? WHERE id = ?",
+        (now, now, "source_ai_copyright_tracker"),
+    )
+    return {
+        "source_id": "source_ai_copyright_tracker",
+        "status": "completed" if not errors else "partial",
+        "cases_seen": cases_seen,
+        "documents_seen": documents_seen,
+        "documents_upserted": documents_upserted,
+        "errors": errors,
+    }
+
+
+def courtlistener_docket_id(url):
+    match = re.search(r"/docket/(\d+)", str(url or ""))
+    return match.group(1) if match else ""
+
+
+def courtlistener_configured_token(config):
+    return config.get("bearer_token") or os.environ.get("COURTLISTENER_API_TOKEN", "")
+
+
+def courtlistener_api_url(config, path, params=None):
+    base = (config.get("search_url") or "https://www.courtlistener.com/api/rest/v4/").rstrip("/") + "/"
+    url = urljoin(base, path.lstrip("/"))
+    if params:
+        url = f"{url}?{urlencode(params)}"
+    return url
+
+
+def courtlistener_request(config, path, params=None):
+    token = courtlistener_configured_token(config)
+    return request_json(
+        courtlistener_api_url(config, path, params),
+        token=token,
+        timeout=30,
+        token_scheme="Token",
+    )
+
+
+def extract_courtlistener_items(payload):
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for key in ("results", "data", "items"):
+            if isinstance(payload.get(key), list):
+                return payload[key]
+    return []
+
+
+def courtlistener_document_url(item):
+    for key in ("download_url", "filepath_ia", "file_url", "url"):
+        value = item.get(key)
+        if isinstance(value, str) and value.startswith("http"):
+            return value
+    filepath = item.get("filepath_local")
+    if isinstance(filepath, str) and filepath:
+        if filepath.startswith("http"):
+            return filepath
+        return urljoin("https://storage.courtlistener.com/", filepath.lstrip("/"))
+    absolute_url = item.get("absolute_url") or item.get("resource_uri")
+    if isinstance(absolute_url, str) and absolute_url:
+        return urljoin("https://www.courtlistener.com/", absolute_url)
+    return ""
+
+
+def normalize_courtlistener_document(item, docket_document):
+    source_url = courtlistener_document_url(item) or docket_document["source_url"]
+    description = (
+        item.get("description")
+        or item.get("short_description")
+        or item.get("document_type")
+        or item.get("pacer_doc_id")
+        or "RECAP document"
+    )
+    document_id = item.get("id") or item.get("pacer_doc_id") or stable_hash(source_url, description)
+    date_value = item.get("date_filed") or item.get("date_created") or item.get("date_upload")
+    text = item.get("plain_text") or item.get("ocr_status") or ""
+    return {
+        "id": f"doc_courtlistener_{stable_hash(document_id, docket_document['id'])[:18]}",
+        "case_id": docket_document["case_id"],
+        "source_id": "source_courtlistener",
+        "title": f"{docket_document['title']} - {description}",
+        "source_url": source_url,
+        "document_type": "recap_document",
+        "jurisdiction": docket_document["jurisdiction"],
+        "confidence": "official",
+        "document_date": date_value,
+        "sha256": stable_hash("courtlistener", document_id, source_url, description),
+        "extracted_text": text[:200000] if isinstance(text, str) else "",
+        "summary_cn": f"CourtListener/RECAP API 返回的公开文书：{description}。关联案件：{docket_document['title']}。",
+    }
+
+
+def run_courtlistener_connector(conn, deadline=None):
+    config = official_config_for("source_courtlistener")
+    if not config["enabled"]:
+        return {"source_id": "source_courtlistener", "status": "skipped", "reason": "disabled"}
+    token = courtlistener_configured_token(config)
+    if not token:
+        return {"source_id": "source_courtlistener", "status": "needs_credentials", "reason": "missing COURTLISTENER_API_TOKEN"}
+
+    docket_documents = rows(
+        conn,
+        """
+        SELECT *
+        FROM documents
+        WHERE source_id = 'source_courtlistener'
+          AND document_type = 'docket'
+          AND source_url LIKE '%courtlistener.com/docket/%'
+        ORDER BY captured_at DESC, created_at DESC
+        LIMIT ?
+        """,
+        (int(config.get("query_limit", 20)),),
+    )
+    inserted_docs = 0
+    checked_dockets = 0
+    errors = []
+    for docket_document in docket_documents:
+        if monitor_budget_exhausted(deadline):
+            errors.append({"stage": "courtlistener", "error": "monitor time budget exhausted"})
+            break
+        docket_id = courtlistener_docket_id(docket_document["source_url"])
+        if not docket_id:
+            continue
+        checked_dockets += 1
+        try:
+            payload = courtlistener_request(
+                config,
+                "recap-documents/",
+                {
+                    "docket_entry__docket": docket_id,
+                    "page_size": min(50, int(config.get("recap_limit", 25))),
+                    "order_by": "-date_created",
+                },
+            )
+            for item in extract_courtlistener_items(payload):
+                document = normalize_courtlistener_document(item, docket_document)
+                if not document["source_url"]:
+                    continue
+                if upsert_tracker_document(conn, document):
+                    inserted_docs += 1
+        except Exception as exc:
+            errors.append({"docket_id": docket_id, "error": str(exc)[:300]})
+
+    now = utc_now()
+    conn.execute(
+        "UPDATE sources SET last_checked_at = ?, updated_at = ? WHERE id = ?",
+        (now, now, "source_courtlistener"),
+    )
+    return {
+        "source_id": "source_courtlistener",
+        "status": "completed" if not errors else "partial",
+        "checked_dockets": checked_dockets,
+        "inserted_documents": inserted_docs,
+        "errors": errors,
     }
 
 
@@ -769,6 +1252,8 @@ def seed(conn):
         ("source_uk_judiciary", "UK Judiciary", "official_portal", "United Kingdom", "https://www.judiciary.uk/", "daily", "Official UK court judgments and press documents for AI copyright litigation."),
         ("source_conseil_etat", "Conseil d'Etat", "official_portal", "France", "https://www.conseil-etat.fr/", "daily", "French official legal opinions and administrative court signals for AI copyright policy."),
         ("source_assemblee", "Assemblée nationale", "official_portal", "France", "https://www.assemblee-nationale.fr/", "daily", "French parliamentary dossiers and amendments for AI copyright legislation."),
+        ("source_ai_copyright_tracker", "AI Copyright Case Tracker", "law_firm_tracker", "Global", AI_COPYRIGHT_TRACKER_URL, "daily", "Public tracker embedded by ChatGPT Is Eating the World. Used as a discovery layer for global AI copyright cases and document links."),
+        ("source_courtlistener", "CourtListener / RECAP", "official_archive_api", "Global", "https://www.courtlistener.com/api/rest/v4/", "hourly", "CourtListener and RECAP public docket/document archive. Token enables API synchronization of public docket entries and RECAP documents."),
         ("source_cms_ai_tracker", "CMS AI copyright case tracker", "law_firm_tracker", "Europe", "https://cms.law/", "daily", "European AI copyright case tracker used as a legal intelligence discovery layer."),
         ("source_taylor_wessing_ai_tracker", "Taylor Wessing AI copyright tracker", "law_firm_tracker", "Europe", "https://www.taylorwessing.com/", "daily", "European AI and copyright tracker used to discover recent litigation procedural updates."),
         ("source_mishcon_ai_ip_tracker", "Mishcon AI and IP cases tracker", "law_firm_tracker", "Europe", "https://www.mishcon.com/", "weekly", "AI and IP cases tracker used as a secondary litigation intelligence source."),
@@ -2289,6 +2774,7 @@ def run_monitor():
         source_rows = rows(conn, "SELECT * FROM sources ORDER BY name")
         monitor_results = [
             refresh_market_indicators(conn, deadline),
+            run_ai_copyright_tracker_connector(conn, deadline),
             run_gdelt_monitor(conn, deadline),
             run_rights_holder_monitor(conn, deadline),
             run_legislation_monitor(conn, deadline),
@@ -2446,7 +2932,12 @@ def run_official_documents():
     now = utc_now()
     run_id = "official_" + now.replace(":", "").replace("+", "Z")
     with connect() as conn:
-        results = [run_judilibre_connector(conn)]
+        deadline = time.monotonic() + MONITOR_RUN_BUDGET_SECONDS
+        results = [
+            run_ai_copyright_tracker_connector(conn, deadline),
+            run_judilibre_connector(conn),
+            run_courtlistener_connector(conn, deadline),
+        ]
         for source_id in OFFICIAL_SOURCE_CONFIGS:
             conn.execute(
                 "UPDATE sources SET last_checked_at = ?, updated_at = ? WHERE id = ?",

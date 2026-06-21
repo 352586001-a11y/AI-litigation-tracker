@@ -6,7 +6,8 @@ These sources do not require a user-provided API key and are wired into `POST /a
 
 | Layer | Source | Method | Notes |
 |---|---|---|---|
-| News discovery | GDELT DOC 2.0 | Public JSON API | Queries Europe/France/Germany/UK AI copyright litigation terms, then keeps only allowlisted domains. |
+| Global case/document discovery | AI Copyright Case Tracker | Public embedded frontend data | Imports global AI copyright cases plus `docket` and `decision` document links from the tracker embedded at ChatGPT Is Eating the World. |
+| News discovery | GDELT DOC 2.0 | Public JSON API | Queries global/Europe/France/Germany/UK AI copyright litigation terms, then keeps only allowlisted domains. |
 | Rights-holder signals | GDELT DOC 2.0 domain queries | Public JSON API | Monitors SACD, Le Figaro, GEMA, SGDL/SNE related queries. All hits enter review. |
 | Legislation and policy signals | GDELT DOC 2.0 official-domain queries | Public JSON API | Monitors European Commission, EUR-Lex, France Ministry of Culture, Assemblée nationale and related official domains for AI Act, GPAI, TDM and French copyright policy terms. |
 | Official EU court signals | CURIA/CJEU RSS | RSS | Monitors EU court items for copyright, IP, AI, TDM, authors/publishers terms. |
@@ -20,15 +21,17 @@ These sources do not require a user-provided API key and are wired into `POST /a
 
 | Source | Why It Needs You | Status |
 |---|---|---|
+| CourtListener / RECAP | Requires a CourtListener API token for REST v4 docket and RECAP document endpoints. | Adapter implemented; token pending. Static docket/document links are imported even without token. |
 | Judilibre / PISTE | Requires ProConnect/PISTE application access and KeyId, bearer token, or OAuth/API credentials. | Adapter implemented; credentials pending. |
 | Légifrance / AIFE | Requires API access and endpoint permission. | Source registered; adapter pending endpoint details. |
 
 ## Priority Sources To Register
 
-1. Judilibre / PISTE: French official judicial decisions.
-2. Légifrance / AIFE: French legal and case-law supplement.
-3. EUR-Lex Web Service or SPARQL: EU legal texts and case-law automation.
-4. CURIA advanced search/API if access is available beyond public RSS.
+1. CourtListener / RECAP: global public docket entries and RECAP documents.
+2. Judilibre / PISTE: French official judicial decisions.
+3. Légifrance / AIFE: French legal and case-law supplement.
+4. EUR-Lex Web Service or SPARQL: EU legal texts and case-law automation.
+5. CURIA advanced search/API if access is available beyond public RSS.
 
 ## Allowlisted News / Commentary Domains
 
@@ -43,6 +46,8 @@ These sources do not require a user-provided API key and are wired into `POST /a
 - Music Business Worldwide
 - JUVE Patent
 - The Technollama
+- CourtListener / RECAP
+- AI Copyright Case Tracker
 
 ## Rights Holder / Organization Domains
 

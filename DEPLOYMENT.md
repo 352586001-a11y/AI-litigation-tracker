@@ -16,6 +16,15 @@ The included `Dockerfile` starts:
 python app.py --host 0.0.0.0 --port ${PORT:-10000}
 ```
 
+The included `render.yaml` also mounts a 1 GB persistent disk:
+
+```text
+mountPath=/var/data
+TRACKER_DB_PATH=/var/data/tracker.db
+```
+
+Keep this setting for 24-hour monitoring. It lets the SQLite database retain imported cases, official document records, approved intelligence cards, and monitor run history across service restarts.
+
 ## Render Cron
 
 The included `render.yaml` defines a cron job. Set this environment variable in Render:
@@ -68,6 +77,14 @@ For Render, use environment variables or Render secret files. The app supports:
 - direct bearer token
 - OAuth client credentials
 
+CourtListener / RECAP can be configured with:
+
+```text
+COURTLISTENER_API_TOKEN=your_courtlistener_token
+```
+
+This enables public CourtListener/RECAP API enrichment for docket entries and already-public RECAP documents. The app does not call PACER purchase or RECAP Fetch endpoints.
+
 Judilibre can be configured with:
 
 ```json
@@ -88,13 +105,19 @@ Judilibre can be configured with:
 
 ## Persistence
 
-The current MVP uses SQLite at:
+The default local database path is:
 
 ```text
 data/tracker.db
 ```
 
-On free ephemeral hosting, the database may be recreated on redeploy. For long-term operation, add persistent storage or migrate to Postgres/Supabase.
+On Render, use the included persistent disk path:
+
+```text
+TRACKER_DB_PATH=/var/data/tracker.db
+```
+
+For heavier usage, migrate the same schema to Postgres/Supabase later.
 
 ## Cost Controls
 

@@ -8,9 +8,15 @@ const state = {
   calendar: [],
   aiAnalysis: [],
   sources: [],
+  monitorRuns: [],
+  worldGeo: null,
   filter: "all",
   evidence: "litigation",
   range: "all",
+  region: "global",
+  zoom: 1,
+  mapVisible: true,
+  query: "",
   selectedJurisdiction: null,
   lastUpdated: null,
   refreshMs: 60000,
@@ -48,6 +54,14 @@ const jurisdictionLabels = {
   Netherlands: "荷兰",
   Spain: "西班牙",
   Italy: "意大利",
+  "United States": "美国",
+  Canada: "加拿大",
+  Brazil: "巴西",
+  China: "中国",
+  Japan: "日本",
+  "South Korea": "韩国",
+  India: "印度",
+  Global: "全球",
   Nordics: "北欧",
   "Council of Europe": "欧洲委员会",
 };
@@ -57,6 +71,10 @@ const statusLabels = {
   LEAD: "线索",
   CASE: "案件",
   CLOSED: "已结束",
+  completed: "已完成",
+  partial: "部分完成",
+  failed: "失败",
+  running: "运行中",
 };
 
 const confidenceLabels = {
@@ -70,6 +88,7 @@ const sourceTypeLabels = {
   official_portal: "官方门户",
   official_database: "官方库",
   official_site: "官网",
+  official_archive_api: "法院归档 API",
   publisher_site: "出版方",
   law_firm_tracker: "法律跟踪器",
   news_index: "新闻索引",
@@ -169,16 +188,42 @@ const rightsStatementKeywords = [
 ];
 
 const jurisdictions = [
-  { id: "fr", name: "France", label: "法国", priority: "P0", score: 97, x: 40, y: 60 },
-  { id: "eu", name: "European Union", label: "欧盟", priority: "P1", score: 84, x: 76, y: 38 },
-  { id: "de", name: "Germany", label: "德国", priority: "P1", score: 78, x: 59, y: 55 },
-  { id: "uk", name: "United Kingdom", label: "英国", priority: "P2", score: 70, x: 30, y: 41 },
-  { id: "dk", name: "Denmark", label: "丹麦", priority: "P1", score: 72, x: 53, y: 24 },
-  { id: "nl", name: "Netherlands", label: "荷兰", priority: "P2", score: 61, x: 48, y: 36 },
-  { id: "es", name: "Spain", label: "西班牙", priority: "P3", score: 48, x: 35, y: 76 },
-  { id: "it", name: "Italy", label: "意大利", priority: "P3", score: 52, x: 66, y: 72 },
-  { id: "no", name: "Nordics", label: "北欧", priority: "P3", score: 45, x: 63, y: 21 },
+  { id: "us", region: "americas", name: "United States", label: "美国", priority: "P1", score: 91, lat: 38.9072, lon: -77.0369 },
+  { id: "ca", region: "americas", name: "Canada", label: "加拿大", priority: "P2", score: 68, lat: 45.4215, lon: -75.6972 },
+  { id: "br", region: "americas", name: "Brazil", label: "巴西", priority: "P3", score: 54, lat: -15.7939, lon: -47.8828 },
+  { id: "uk", region: "europe", name: "United Kingdom", label: "英国", priority: "P1", score: 78, lat: 51.5072, lon: -0.1276 },
+  { id: "fr", region: "europe", name: "France", label: "法国", priority: "P0", score: 97, lat: 48.8566, lon: 2.3522 },
+  { id: "eu", region: "europe", name: "European Union", label: "欧盟", priority: "P1", score: 84, lat: 50.8503, lon: 4.3517 },
+  { id: "de", region: "europe", name: "Germany", label: "德国", priority: "P1", score: 86, lat: 52.52, lon: 13.405 },
+  { id: "dk", region: "europe", name: "Denmark", label: "丹麦", priority: "P1", score: 76, lat: 55.6761, lon: 12.5683 },
+  { id: "nl", region: "europe", name: "Netherlands", label: "荷兰", priority: "P2", score: 66, lat: 52.3676, lon: 4.9041 },
+  { id: "it", region: "europe", name: "Italy", label: "意大利", priority: "P2", score: 65, lat: 41.9028, lon: 12.4964 },
+  { id: "cn", region: "apac", name: "China", label: "中国", priority: "P2", score: 70, lat: 39.9042, lon: 116.4074 },
+  { id: "jp", region: "apac", name: "Japan", label: "日本", priority: "P3", score: 55, lat: 35.6762, lon: 139.6503 },
+  { id: "kr", region: "apac", name: "South Korea", label: "韩国", priority: "P2", score: 64, lat: 37.5665, lon: 126.978 },
+  { id: "in", region: "apac", name: "India", label: "印度", priority: "P3", score: 58, lat: 28.6139, lon: 77.209 },
 ];
+
+const regionLabels = {
+  global: "全球",
+  europe: "欧洲",
+  americas: "美洲",
+  apac: "亚太",
+};
+
+const regionViewports = {
+  global: { lat: 20, lon: 0, zoom: 1, originX: 50, originY: 50 },
+  europe: { lat: 50, lon: 10, zoom: 1.85, originX: 52, originY: 29 },
+  americas: { lat: 28, lon: -75, zoom: 1.65, originX: 24, originY: 46 },
+  apac: { lat: 28, lon: 112, zoom: 1.75, originX: 75, originY: 36 },
+};
+
+const geoProjection = {
+  width: 1000,
+  height: 520,
+  minLat: -58,
+  maxLat: 84,
+};
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -186,6 +231,14 @@ async function api(path, options) {
   const response = await fetch(path, options);
   if (!response.ok) throw new Error(await response.text());
   return response.json();
+}
+
+async function loadWorldGeo() {
+  if (state.worldGeo) return state.worldGeo;
+  const response = await fetch("/world-countries.geojson");
+  if (!response.ok) throw new Error("world map geojson load failed");
+  state.worldGeo = await response.json();
+  return state.worldGeo;
 }
 
 function escapeHtml(value) {
@@ -203,11 +256,77 @@ function safeUrl(value) {
   return url.startsWith("http://") || url.startsWith("https://") ? url : "#";
 }
 
+function hasUsableSource(item) {
+  return safeUrl(item.source_url) !== "#";
+}
+
+function isPublishableEvidence(item) {
+  if (!item) return false;
+  if (item.detail_kind === "case") return true;
+  if (["draft", "rejected"].includes(String(item.status || "").toLowerCase())) return false;
+  return hasUsableSource(item);
+}
+
+function projectLonLat(lon, lat) {
+  const clampedLat = Math.max(geoProjection.minLat, Math.min(geoProjection.maxLat, Number(lat)));
+  const clampedLon = Math.max(-180, Math.min(180, Number(lon)));
+  const x = ((clampedLon + 180) / 360) * geoProjection.width;
+  const y = ((geoProjection.maxLat - clampedLat) / (geoProjection.maxLat - geoProjection.minLat)) * geoProjection.height;
+  return {
+    x,
+    y,
+    xp: (x / geoProjection.width) * 100,
+    yp: (y / geoProjection.height) * 100,
+  };
+}
+
+function geoRingPath(ring) {
+  return ring
+    .map(([lon, lat], index) => {
+      const point = projectLonLat(lon, lat);
+      return `${index ? "L" : "M"}${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+    })
+    .join(" ") + " Z";
+}
+
+function geoPolygonPath(polygon) {
+  return polygon.map(geoRingPath).join(" ");
+}
+
+function geoFeaturePath(feature) {
+  const geometry = feature?.geometry;
+  if (!geometry) return "";
+  if (geometry.type === "Polygon") return geoPolygonPath(geometry.coordinates);
+  if (geometry.type === "MultiPolygon") return geometry.coordinates.map(geoPolygonPath).join(" ");
+  return "";
+}
+
+function renderGeoMap(activeNames = new Set()) {
+  const monitored = new Set(jurisdictions.map((item) => item.name));
+  const p0Names = new Set(jurisdictions.filter((item) => item.priority === "P0").map((item) => item.name));
+  const features = state.worldGeo?.features || [];
+  if (!features.length) return `<div class="wm-map-loading">正在加载真实世界地图</div>`;
+  return `
+    <svg class="wm-geo-map" viewBox="0 0 ${geoProjection.width} ${geoProjection.height}" role="img" aria-label="真实国家边界世界地图">
+      <g>
+        ${features
+          .map((feature) => {
+            const name = feature.properties?.name || "";
+            const className = `${monitored.has(name) ? " monitored" : ""}${activeNames.has(name) ? " layer-active" : ""}${p0Names.has(name) ? " p0" : ""}`;
+            return `<path class="wm-country${className}" d="${geoFeaturePath(feature)}"></path>`;
+          })
+          .join("")}
+      </g>
+    </svg>
+  `;
+}
+
 function priorityBadge(priority) {
   return `<span class="badge ${escapeHtml(priority)}">${escapeHtml(priority)}</span>`;
 }
 
 function displaySignalType(item) {
+  if (item.detail_kind === "case" || item.signal_type === "case_object") return "案件对象";
   if (item.signal_type && ["video_intelligence", "market_indicator", "calendar_event"].includes(item.signal_type)) {
     return signalTypeLabels[item.signal_type];
   }
@@ -258,16 +377,53 @@ function sortByTimeDesc(items) {
   return [...items].sort((a, b) => new Date(sortDate(b)).getTime() - new Date(sortDate(a)).getTime());
 }
 
+function rangeDate(item) {
+  return item.signal_date || item.document_date || item.video_date || item.event_date || item.last_checked_at || null;
+}
+
 function inRange(item) {
   if (state.range === "all") return true;
-  const time = new Date(sortDate(item)).getTime();
-  if (Number.isNaN(time)) return true;
-  const days = state.range === "7d" ? 7 : 30;
-  return Date.now() - time <= days * 24 * 60 * 60 * 1000;
+  const time = new Date(rangeDate(item)).getTime();
+  if (Number.isNaN(time)) return false;
+  const now = Date.now();
+  if (time > now + 60 * 1000) return false;
+  const hours = {
+    "1h": 1,
+    "6h": 6,
+    "24h": 24,
+    "48h": 48,
+    "7d": 7 * 24,
+    "30d": 30 * 24,
+  }[state.range] || 30 * 24;
+  return now - time <= hours * 60 * 60 * 1000;
+}
+
+function rangeLabel() {
+  return {
+    "1h": "最近 1 小时",
+    "6h": "最近 6 小时",
+    "24h": "最近 24 小时",
+    "48h": "最近 48 小时",
+    "7d": "最近 7 天",
+    "30d": "最近 30 天",
+    all: "全部时间",
+  }[state.range] || "全部时间";
+}
+
+function regionForJurisdiction(name) {
+  if (["Europe", "European Union", "United Kingdom", "France", "Germany", "Denmark", "Netherlands", "Italy", "Spain", "Nordics", "Council of Europe"].includes(name)) return "europe";
+  if (["Americas", "United States", "Canada", "Brazil"].includes(name)) return "americas";
+  if (["APAC", "Asia Pacific", "China", "Japan", "South Korea", "India"].includes(name)) return "apac";
+  return jurisdictions.find((item) => item.name === name)?.region || "global";
+}
+
+function inSelectedRegion(item) {
+  if (state.region === "global") return true;
+  return regionForJurisdiction(item.jurisdiction) === state.region;
 }
 
 function inSelectedJurisdiction(item) {
-  return !state.selectedJurisdiction || item.jurisdiction === state.selectedJurisdiction;
+  return inSelectedRegion(item) && (!state.selectedJurisdiction || item.jurisdiction === state.selectedJurisdiction);
 }
 
 function orgById(id) {
@@ -284,6 +440,44 @@ function signalHaystack(item) {
 
 function hasAnyKeyword(haystack, keywords) {
   return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
+}
+
+function searchableText(item) {
+  return [
+    item.title,
+    item.summary,
+    item.summary_cn,
+    item.source_name,
+    item.source_id,
+    item.source_type,
+    item.base_url,
+    item.notes,
+    item.refresh_cadence,
+    item.document_type,
+    item.jurisdiction,
+    item.organization_name,
+    item.case_title,
+    item.name,
+    item.full_name,
+    item.case_number,
+    item.court,
+    item.ecli,
+    item.tags,
+    item.claim_types,
+    item.ai_systems,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function matchesSearch(item) {
+  const query = state.query.trim().toLowerCase();
+  if (!query) return true;
+  return query.split(/\s+/).every((part) => searchableText(item).includes(part));
+}
+
+function caseMatchesSearch(item) {
+  if (matchesSearch(item)) return true;
+  if (!state.query.trim()) return true;
+  return signalsForCase(item.id).some(matchesSearch);
 }
 
 function hasLitigationCase(item) {
@@ -337,15 +531,72 @@ function isLegislationSignal(item) {
 }
 
 function docsForJurisdiction(name) {
-  return state.documents.filter((item) => item.jurisdiction === name);
+  return state.documents.filter((item) => item.jurisdiction === name).filter(matchesSearch);
 }
 
 function intelForJurisdiction(name) {
-  return state.intel.filter((item) => item.jurisdiction === name && inRange(item));
+  return state.intel.filter((item) => item.jurisdiction === name && inRange(item)).filter(matchesSearch);
 }
 
 function caseForJurisdiction(name) {
-  return state.cases.filter((item) => item.jurisdiction === name);
+  return state.cases.filter((item) => item.jurisdiction === name).filter(caseInRange).filter(caseMatchesSearch);
+}
+
+function signalsForCase(caseId) {
+  if (!caseId) return [];
+  const intelSignals = state.intel
+    .filter((item) => item.case_id === caseId)
+    .map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at }));
+  const documentSignals = state.documents
+    .filter((item) => item.case_id === caseId)
+    .map((item) => ({ ...item, sort_date: item.document_date || item.captured_at || item.created_at }));
+  const videoSignals = state.video
+    .filter((item) => item.case_id === caseId)
+    .map((item) => ({ ...item, sort_date: item.video_date || item.approved_at || item.updated_at || item.created_at }));
+  const calendarSignals = state.calendar
+    .filter((item) => item.case_id === caseId)
+    .map((item) => ({ ...item, sort_date: item.event_date }));
+  return [...intelSignals, ...documentSignals, ...videoSignals, ...calendarSignals];
+}
+
+function caseInRange(item) {
+  if (state.range === "all") return true;
+  return signalsForCase(item.id).some(inRange);
+}
+
+function visibleCases() {
+  return state.cases.filter(inSelectedJurisdiction).filter(caseInRange).filter(caseMatchesSearch);
+}
+
+function visibleSignals() {
+  return getAllSignals().filter(inSelectedJurisdiction).filter(matchesSearch);
+}
+
+function documentGapRows(cases = visibleCases()) {
+  const rowsByPriority = ["P0", "P1", "P2", "P3"].map((priority) => {
+    const total = cases.filter((item) => item.priority === priority).length;
+    const gaps = cases.filter((item) => item.priority === priority && Number(item.document_count || 0) === 0).length;
+    return [`${priority} 缺口`, gaps, priority, total];
+  });
+  return rowsByPriority.filter((row) => row[1] || row[3]);
+}
+
+function freshnessRows(signals = visibleSignals()) {
+  const buckets = [
+    ["7 天内", (item) => {
+      const days = daysAgo(sortDate(item));
+      return days !== null && days <= 7;
+    }, "P0"],
+    ["30 天内", (item) => {
+      const days = daysAgo(sortDate(item));
+      return days !== null && days > 7 && days <= 30;
+    }, "P1"],
+    ["较早", (item) => {
+      const days = daysAgo(sortDate(item));
+      return days === null || days > 30;
+    }, "P3"],
+  ];
+  return buckets.map(([label, predicate, tone]) => [label, signals.filter(predicate).length, tone]);
 }
 
 function getOfficialEvidence() {
@@ -422,10 +673,10 @@ function getCalendarEvidence() {
 }
 
 function getEvidenceItems(layer = state.evidence) {
-  if (layer === "official") return getOfficialEvidence();
-  if (layer === "video") return getVideoEvidence();
-  if (layer === "market") return getMarketEvidence();
-  if (layer === "calendar") return getCalendarEvidence();
+  if (layer === "official") return getOfficialEvidence().filter(isPublishableEvidence).filter(matchesSearch);
+  if (layer === "video") return getVideoEvidence().filter(isPublishableEvidence).filter(matchesSearch);
+  if (layer === "market") return getMarketEvidence().filter(inRange).filter(inSelectedJurisdiction).filter(isPublishableEvidence).filter(matchesSearch);
+  if (layer === "calendar") return getCalendarEvidence().filter(isPublishableEvidence).filter(matchesSearch);
 
   const filtered = state.intel.filter((item) => {
     if (layer === "litigation") return isLitigationSignal(item);
@@ -435,7 +686,153 @@ function getEvidenceItems(layer = state.evidence) {
 
   return sortByTimeDesc(filtered.map((item) => ({ ...item, sort_date: item.signal_date || item.approved_at || item.created_at })))
     .filter(inRange)
-    .filter(inSelectedJurisdiction);
+    .filter(inSelectedJurisdiction)
+    .filter(isPublishableEvidence)
+    .filter(matchesSearch);
+}
+
+function layerItemsForJurisdiction(name, layer = state.evidence) {
+  const jurisdictionFilter = (item) => item.jurisdiction === name;
+  if (layer === "litigation") {
+    const cases = caseForJurisdiction(name);
+    const updates = state.intel
+      .filter(jurisdictionFilter)
+      .filter(inRange)
+      .filter(matchesSearch)
+      .filter(isLitigationSignal)
+      .filter(isPublishableEvidence);
+    return [...cases, ...updates];
+  }
+  if (layer === "official") {
+    const docs = state.documents
+      .filter(jurisdictionFilter)
+      .filter(inRange)
+      .filter(matchesSearch)
+      .filter(isPublishableEvidence);
+    const officialIntel = state.intel
+      .filter(jurisdictionFilter)
+      .filter(inRange)
+      .filter(matchesSearch)
+      .filter((item) => item.signal_type === "official_court_document")
+      .filter(isPublishableEvidence);
+    return [...docs, ...officialIntel];
+  }
+  if (layer === "rights") {
+    return state.intel.filter(jurisdictionFilter).filter(inRange).filter(matchesSearch).filter(isRightsVoice).filter(isPublishableEvidence);
+  }
+  if (layer === "legislation") {
+    return state.intel.filter(jurisdictionFilter).filter(inRange).filter(matchesSearch).filter(isLegislationSignal).filter(isPublishableEvidence);
+  }
+  if (layer === "video") {
+    return state.video
+      .filter(jurisdictionFilter)
+      .map((item) => ({ ...item, sort_date: item.video_date || item.approved_at || item.updated_at || item.created_at }))
+      .filter(inRange)
+      .filter(matchesSearch)
+      .filter(isPublishableEvidence);
+  }
+  if (layer === "market") {
+    return state.market.filter(jurisdictionFilter).filter(inRange).filter(matchesSearch).filter(isPublishableEvidence);
+  }
+  if (layer === "calendar") {
+    return state.calendar
+      .filter(jurisdictionFilter)
+      .map((item) => ({ ...item, sort_date: item.event_date }))
+      .filter(inRange)
+      .filter(matchesSearch)
+      .filter(isPublishableEvidence);
+  }
+  return [];
+}
+
+function mapLayerSignals() {
+  if (state.evidence === "litigation") return getEvidenceItems("litigation");
+  return getEvidenceItems(state.evidence);
+}
+
+function caseToDetailItem(item) {
+  const caseSignals = sortByTimeDesc(
+    signalsForCase(item.id)
+      .filter(inRange)
+      .filter(matchesSearch)
+      .filter(isPublishableEvidence)
+  );
+  const latestSignal = caseSignals[0];
+  const documentCount = Number(item.document_count || 0);
+  return {
+    ...item,
+    detail_kind: "case",
+    signal_type: "case_object",
+    sort_date: latestSignal ? sortDate(latestSignal) : item.updated_at || item.created_at,
+    source_name: `${statusLabels[item.status] || item.status || "案件库"} · ${documentCount} 份文书 · ${caseSignals.length} 条证据`,
+    summary: item.summary || "案件库对象，点击可查看聚合证据链。",
+  };
+}
+
+function layerDetailItems() {
+  const passesPriority = (item) => state.filter === "all" || (item.priority || "P2") === state.filter;
+  if (state.evidence === "litigation") {
+    const cases = visibleCases().map(caseToDetailItem);
+    const litigationSignals = getEvidenceItems("litigation").map((item) => ({ ...item, detail_kind: "signal" }));
+    return sortByTimeDesc([...cases, ...litigationSignals]).filter(passesPriority);
+  }
+  return getEvidenceItems(state.evidence)
+    .map((item) => ({ ...item, detail_kind: item.evidence_kind === "official" ? "document" : "signal" }))
+    .filter(passesPriority);
+}
+
+function renderLayerDetailCard(item) {
+  const sourceUrl = safeUrl(item.source_url);
+  const jurisdiction = jurisdictionLabels[item.jurisdiction] || item.jurisdiction || "未知法域";
+  const signalType = displaySignalType(item);
+  const detailDate = formatDate(rangeDate(item) || sortDate(item));
+  const clickable = item.detail_kind === "case" && item.id;
+  return `
+    <article class="wm-detail-card ${escapeHtml(item.priority || "P2")} ${clickable ? "is-clickable" : ""}" ${clickable ? `data-case-id="${escapeHtml(item.id)}" role="button" tabindex="0"` : ""}>
+      <div class="wm-detail-meta">
+        ${priorityBadge(item.priority || "P2")}
+        <span>${escapeHtml(signalType)}</span>
+        <span>${escapeHtml(detailDate)}</span>
+        <span>${escapeHtml(jurisdiction)}</span>
+      </div>
+      <h4>${escapeHtml(item.title || item.name || "未命名信号")}</h4>
+      <p>${escapeHtml(item.summary || item.summary_cn || "暂无摘要。")}</p>
+      <div class="wm-detail-foot">
+        <span>${escapeHtml(item.source_name || item.source_id || "案件库")}</span>
+        ${clickable ? "<em>点击查看案件详情</em>" : `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">打开来源</a>`}
+      </div>
+    </article>
+  `;
+}
+
+function renderLayerDetail() {
+  const list = $("#layerDetailList");
+  if (!list) return;
+  const title = $("#layerDetailTitle");
+  const kicker = $("#layerDetailKicker");
+  const layerName = layerLabels[state.evidence] || state.evidence;
+  const scopeName = state.selectedJurisdiction
+    ? jurisdictionLabels[state.selectedJurisdiction] || state.selectedJurisdiction
+    : regionLabels[state.region] || "全球";
+  const items = layerDetailItems();
+  if (title) title.textContent = `${scopeName} · ${layerName.replace("层", "详情")}`;
+  if (kicker) kicker.textContent = `${rangeLabel()} · ${items.length} 条`;
+  list.innerHTML = items.length
+    ? items.slice(0, 28).map(renderLayerDetailCard).join("")
+    : `<div class="empty-state">这个时间窗口没有可核验的${escapeHtml(layerName)}信号。切换到“全部”可查看案件库和历史证据。</div>`;
+
+  list.querySelectorAll(".wm-detail-card[data-case-id]").forEach((card) => {
+    const open = () => showCase(card.dataset.caseId);
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a")) return;
+      open();
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
+    });
+  });
 }
 
 function getAllSignals() {
@@ -455,13 +852,18 @@ function getAllSignals() {
 }
 
 function renderMetrics() {
-  const litigation = state.intel.filter(isLitigationSignal).length;
-  const official = state.documents.length + state.intel.filter((item) => item.signal_type === "official_court_document").length;
-  const rights = state.intel.filter(isRightsVoice).length;
-  const legislation = state.intel.filter(isLegislationSignal).length;
-  const video = state.video.length;
-  const market = state.market.length;
-  const calendar = state.calendar.length;
+  const scopedIntel = state.intel.filter(inSelectedJurisdiction).filter(inRange).filter(matchesSearch);
+  const scopedDocuments = state.documents.filter(inSelectedJurisdiction).filter(inRange).filter(matchesSearch);
+  const scopedVideo = getVideoEvidence().filter(matchesSearch);
+  const scopedMarket = state.market.filter(inSelectedJurisdiction).filter(matchesSearch);
+  const scopedCalendar = getCalendarEvidence().filter(matchesSearch);
+  const litigation = scopedIntel.filter(isLitigationSignal).length;
+  const official = scopedDocuments.length + scopedIntel.filter((item) => item.signal_type === "official_court_document").length;
+  const rights = scopedIntel.filter(isRightsVoice).length;
+  const legislation = scopedIntel.filter(isLegislationSignal).length;
+  const video = scopedVideo.length;
+  const market = scopedMarket.length;
+  const calendar = scopedCalendar.length;
 
   $("#metricNews").textContent = litigation;
   $("#metricOfficial").textContent = official;
@@ -470,16 +872,17 @@ function renderMetrics() {
   $("#metricVideo").textContent = video;
   $("#metricMarket").textContent = market;
   $("#metricCalendar").textContent = calendar;
-  const recentSignals = getAllSignals().filter((item) => {
+  const recentSignals = visibleSignals().filter((item) => {
     const time = new Date(sortDate(item)).getTime();
     return !Number.isNaN(time) && Date.now() - time <= 30 * 24 * 60 * 60 * 1000;
   });
   const configuredSources = state.sources.filter((item) => item.configured).length;
+  const currentLayerSignals = mapLayerSignals();
 
   $("#metrics").innerHTML = [
-    ["案件", state.cases.length],
-    ["P0 对象", state.cases.filter((item) => item.priority === "P0").length],
-    ["情报卡", state.intel.length],
+    ["案件", visibleCases().length],
+    ["P0 对象", visibleCases().filter((item) => item.priority === "P0").length],
+    ["情报卡", scopedIntel.length],
     ["官方文书", official],
     ["视频源", video],
     ["金融指标", market],
@@ -491,7 +894,11 @@ function renderMetrics() {
     .join("");
   $("#sourceCoverage").textContent = `源 ${configuredSources}/${state.sources.length}`;
   $("#recentSignalCount").textContent = `${recentSignals.length} 条 / 30 天`;
-  $("#liveHeadline").textContent = getAllSignals()[0]?.title || "等待情报同步";
+  $("#liveHeadline").textContent = currentLayerSignals[0]?.title || "当前图层暂无信号";
+  const latestRun = state.monitorRuns[0];
+  $("#lastMonitorRun").textContent = latestRun
+    ? `${statusLabels[latestRun.status] || latestRun.status} · ${formatTime(latestRun.completed_at || latestRun.started_at)}`
+    : "等待运行";
 }
 
 function countBy(items, getKey) {
@@ -534,7 +941,8 @@ function chartCard(label, title, body) {
 function renderChartDeck() {
   const target = $("#chartDeck");
   if (!target) return;
-  const signals = getAllSignals().filter(inSelectedJurisdiction);
+  const signals = visibleSignals();
+  const cases = visibleCases();
   const priorityRows = ["P0", "P1", "P2", "P3"].map((priority) => [
     priority,
     signals.filter((item) => (item.priority || "P2") === priority).length,
@@ -555,11 +963,17 @@ function renderChartDeck() {
   const confidenceRows = Object.entries(countBy(signals, (item) => confidenceLabels[item.confidence] || item.confidence || "待确认"))
     .sort((a, b) => b[1] - a[1])
     .map(([label, value]) => [label, value, label.includes("官方") ? "P0" : "P2"]);
-  const aiRows = state.aiAnalysis.slice(0, 5).map((item) => [
-    item.name,
-    item.risk_score,
-    item.risk_level || item.base_priority || "P2",
-  ]);
+  const aiRows = state.aiAnalysis
+    .filter(inSelectedJurisdiction)
+    .filter(matchesSearch)
+    .slice(0, 5)
+    .map((item) => [
+      item.name,
+      item.risk_score,
+      item.risk_level || item.base_priority || "P2",
+    ]);
+  const gapRows = documentGapRows(cases).map(([label, value, tone, total]) => [`${label}/${total}`, value, tone]);
+  const freshRows = freshnessRows(signals);
   const configuredSources = state.sources.filter((item) => item.configured).length;
   const totalSources = Math.max(1, state.sources.length);
   const sourcePct = Math.round(configuredSources / totalSources * 100);
@@ -568,6 +982,8 @@ function renderChartDeck() {
     chartCard("LAYER", "分类构成", chartBars(layerRows)),
     chartCard("GEO", "法域热度", chartBars(jurisdictionRows.length ? jurisdictionRows : [["无数据", 0, "P3"]])),
     chartCard("QUALITY", "来源可信度", chartBars(confidenceRows.length ? confidenceRows : [["待同步", 0, "P3"]])),
+    chartCard("FRESH", "数据新鲜度", chartBars(freshRows)),
+    chartCard("DOC GAP", "官方文书缺口", chartBars(gapRows.length ? gapRows : [["无缺口", 0, "P3"]])),
     chartCard("AI SCORE", "机构风险评分", chartBars(aiRows.length ? aiRows : [["加载中", 0, "P3"]], 100)),
     chartCard(
       "SOURCE",
@@ -580,7 +996,7 @@ function renderChartDeck() {
 function renderAiAnalysis() {
   const target = $("#aiAnalysis");
   if (!target) return;
-  target.innerHTML = state.aiAnalysis.slice(0, 6).map((item) => `
+  target.innerHTML = state.aiAnalysis.filter(inSelectedJurisdiction).filter(matchesSearch).slice(0, 6).map((item) => `
     <article class="wm-ai-card ${escapeHtml(item.risk_level || item.base_priority || "P2")}">
       <div>
         <span>${escapeHtml(jurisdictionLabels[item.jurisdiction] || item.jurisdiction)}</span>
@@ -597,47 +1013,84 @@ function renderAiAnalysis() {
 }
 
 function renderMap() {
+  const scopedCases = visibleCases();
+  const scopedSignals = visibleSignals();
+  const scopedDocs = state.documents.filter(inSelectedJurisdiction).filter(inRange).filter(matchesSearch);
+  const scopedLayerItems = mapLayerSignals();
+  const gapCount = scopedCases.filter((item) => Number(item.document_count || 0) === 0).length;
+  const p0Count = scopedLayerItems.filter((item) => item.priority === "P0").length;
+  const viewport = regionViewports[state.region] || regionViewports.global;
+  const geoPoint = (lon, lat) => {
+    const point = projectLonLat(lon, lat);
+    return `left:${point.xp.toFixed(2)}%; top:${point.yp.toFixed(2)}%;`;
+  };
+  const activeLayerJurisdictions = new Set();
   const points = jurisdictions
+    .filter((item) => state.region === "global" || item.region === state.region)
     .map((item) => {
-      const intelItems = intelForJurisdiction(item.name);
-      const caseCount = caseForJurisdiction(item.name).length;
-      const docCount = docsForJurisdiction(item.name).length;
-      const intelCount = intelItems.length;
-      const legislationCount = intelItems.filter(isLegislationSignal).length;
+      const layerItems = layerItemsForJurisdiction(item.name);
+      const layerCount = layerItems.length;
       const isActive = state.selectedJurisdiction === item.name;
-      if (caseCount + intelCount + docCount === 0 && item.priority !== "P0") return "";
-      const intensity = Math.min(100, item.score + intelCount * 4 + docCount * 6 + legislationCount * 3);
+      if (!layerCount) return "";
+      activeLayerJurisdictions.add(item.name);
+      const topPriority = layerItems.some((entry) => entry.priority === "P0") ? "P0" : item.priority;
+      const intensity = Math.min(100, item.score + layerCount * 8);
       return `
-        <button class="wm-map-point ${escapeHtml(item.priority)} ${isActive ? "active" : ""}" style="left:${item.x}%; top:${item.y}%;" data-jurisdiction="${escapeHtml(item.name)}">
+        <button class="wm-map-point ${escapeHtml(topPriority)} ${isActive ? "active" : ""}" style="${geoPoint(item.lon, item.lat)}" data-jurisdiction="${escapeHtml(item.name)}">
           <span>${escapeHtml(item.label)}</span>
-          <strong>${escapeHtml(item.priority)}</strong>
-          <em>${caseCount} 案件 · ${docCount} 文书 · ${intelCount} 信号</em>
+          <strong>${escapeHtml(topPriority)}</strong>
+          <em>${escapeHtml(layerLabels[state.evidence] || state.evidence)} · ${layerCount} 条</em>
           <i style="width:${intensity}%"></i>
         </button>
       `;
     })
     .join("");
+  const regionName = regionLabels[state.region] || "全球";
+  const mapLabel = state.region === "global" ? "GLOBAL" : regionName.toUpperCase();
 
   $("#nordicMap").innerHTML = `
     <div class="wm-grid"></div>
     <div class="wm-scan"></div>
     <div class="wm-radar-ring one"></div>
     <div class="wm-radar-ring two"></div>
-    <div class="wm-map-label">EUROPE</div>
-    <div class="wm-europe-shape"></div>
-    <div class="wm-route r1"></div>
-    <div class="wm-route r2"></div>
-    <div class="wm-route r3"></div>
-    <div class="wm-source-pin" style="left:58%; top:47%;">EUR-Lex</div>
-    <div class="wm-source-pin" style="left:42%; top:63%;">Judilibre</div>
-    <div class="wm-source-pin" style="left:44%; top:55%;">SACD</div>
-    <div class="wm-source-pin" style="left:46%; top:54%;">Figaro</div>
-    <div class="wm-source-pin" style="left:38%; top:52%;">SNE</div>
-    <div class="wm-source-pin" style="left:56%; top:30%;">Koda</div>
-    <div class="wm-source-pin video" style="left:69%; top:34%;">Video</div>
-    <div class="wm-source-pin market" style="left:23%; top:69%;">Market</div>
-    <div class="wm-source-pin calendar" style="left:74%; top:60%;">Calendar</div>
-    ${points}
+    <div class="wm-map-label">${escapeHtml(mapLabel)}</div>
+    <div class="wm-map-viewport" style="--map-zoom:${state.zoom}; --map-origin-x:${viewport.originX}%; --map-origin-y:${viewport.originY}%;">
+      ${renderGeoMap(activeLayerJurisdictions)}
+      <div class="wm-risk-zone z-us"></div>
+      <div class="wm-risk-zone z-eu"></div>
+      <div class="wm-risk-zone z-fr"></div>
+      <div class="wm-risk-zone z-de"></div>
+      <div class="wm-risk-zone z-cn"></div>
+      <div class="wm-place-label" style="${geoPoint(-79.3832, 43.6532)}">Toronto</div>
+      <div class="wm-place-label" style="${geoPoint(-74.006, 40.7128)}">New York</div>
+      <div class="wm-place-label" style="${geoPoint(-0.1276, 51.5072)}">UNITED KINGDOM</div>
+      <div class="wm-place-label" style="${geoPoint(2.3522, 48.8566)}">FRANCE</div>
+      <div class="wm-place-label" style="${geoPoint(13.405, 52.52)}">GERMANY</div>
+      <div class="wm-place-label" style="${geoPoint(18.0686, 59.3293)}">SWEDEN</div>
+      <div class="wm-place-label" style="${geoPoint(77.209, 28.6139)}">INDIA</div>
+      <div class="wm-place-label" style="${geoPoint(116.4074, 39.9042)}">CHINA</div>
+      <div class="wm-place-label" style="${geoPoint(139.6503, 35.6762)}">JAPAN</div>
+      <div class="wm-place-label muted" style="${geoPoint(74, -25)}">INDIAN OCEAN</div>
+      <div class="wm-route r1"></div>
+      <div class="wm-route r2"></div>
+      <div class="wm-route r3"></div>
+      <div class="wm-source-pin" style="${geoPoint(4.3517, 50.8503)}">EUR-Lex</div>
+      <div class="wm-source-pin" style="${geoPoint(2.3522, 48.8566)}">Judilibre</div>
+      <div class="wm-source-pin" style="${geoPoint(-77.0369, 38.9072)}">CourtListener</div>
+      <div class="wm-source-pin" style="${geoPoint(-77.0369, 38.9072)}">RECAP</div>
+      <div class="wm-source-pin" style="${geoPoint(2.3522, 48.8566)}">SACD</div>
+      <div class="wm-source-pin video" style="${geoPoint(30, 46)}">Video</div>
+      <div class="wm-source-pin market" style="${geoPoint(-74.006, 40.7128)}">Market</div>
+      <div class="wm-source-pin calendar" style="${geoPoint(13.405, 52.52)}">Calendar</div>
+      ${points}
+    </div>
+    <div class="wm-region-stats">
+      <article><span>CASES</span><strong>${scopedCases.length}</strong><em>当前案件</em></article>
+      <article><span>DOCS</span><strong>${scopedDocs.length}</strong><em>文书记录</em></article>
+      <article><span>LAYER</span><strong>${scopedLayerItems.length}</strong><em>当前图层</em></article>
+      <article><span>GAPS</span><strong>${gapCount}</strong><em>无文书案件</em></article>
+      <article class="danger"><span>P0</span><strong>${p0Count}</strong><em>最高风险</em></article>
+    </div>
   `;
 
   document.querySelectorAll(".wm-map-point").forEach((point) => {
@@ -647,6 +1100,7 @@ function renderMap() {
       renderAll();
     });
   });
+  updateMapViewportControls();
 }
 
 function renderIntel() {
@@ -747,8 +1201,9 @@ function renderIntelCard(item) {
 }
 
 function renderCases() {
-  const visibleCases = state.cases.filter((item) => !state.selectedJurisdiction || item.jurisdiction === state.selectedJurisdiction);
-  $("#cases").innerHTML = visibleCases
+  const cases = visibleCases().sort((a, b) => Number(b.risk_score || 0) - Number(a.risk_score || 0));
+  $("#cases").innerHTML = cases.length
+    ? cases
     .map(
       (item) => `
         <article class="wm-case-card" data-case-id="${escapeHtml(item.id)}">
@@ -764,7 +1219,8 @@ function renderCases() {
         </article>
       `
     )
-    .join("");
+    .join("")
+    : `<div class="empty-state">当前区域和时间窗口下没有诉讼对象。</div>`;
 
   document.querySelectorAll(".wm-case-card").forEach((card) => {
     card.addEventListener("click", () => showCase(card.dataset.caseId));
@@ -774,7 +1230,10 @@ function renderCases() {
 function renderSources() {
   const target = $("#sourceStack");
   if (!target) return;
-  const sourceItems = state.sources.length ? state.sources : [];
+  const sourceItems = state.sources.length
+    ? state.sources.filter((source) => state.region === "global" || source.jurisdiction === "Global" || regionForJurisdiction(source.jurisdiction) === state.region)
+      .filter(matchesSearch)
+    : [];
   target.innerHTML = sourceItems
     .sort((a, b) => Number(b.configured) - Number(a.configured) || String(a.jurisdiction).localeCompare(String(b.jurisdiction)))
     .slice(0, 14)
@@ -795,7 +1254,7 @@ function renderSources() {
 function renderTimeline() {
   const target = $("#timelineItems");
   if (!target) return;
-  const signals = getAllSignals().filter(inSelectedJurisdiction).slice(0, 14);
+  const signals = mapLayerSignals().filter(inSelectedJurisdiction).slice(0, 14);
   target.innerHTML = signals
     .map((item) => {
       const signalType = displaySignalType(item);
@@ -878,8 +1337,17 @@ async function showCase(caseId) {
 }
 
 function updateSelectedJurisdiction() {
-  const label = state.selectedJurisdiction ? jurisdictionLabels[state.selectedJurisdiction] || state.selectedJurisdiction : "全欧洲视图";
+  const label = state.selectedJurisdiction ? jurisdictionLabels[state.selectedJurisdiction] || state.selectedJurisdiction : `${regionLabels[state.region] || "全球"}视图`;
   $("#activeJurisdiction").textContent = label;
+  const activeRegion = $("#activeRegion");
+  if (activeRegion) activeRegion.textContent = regionLabels[state.region] || "全球";
+}
+
+function updateMapViewportControls() {
+  const viewport = regionViewports[state.region] || regionViewports.global;
+  $("#mapLat").textContent = `lat ${viewport.lat.toFixed(1)}`;
+  $("#mapLon").textContent = `lon ${viewport.lon.toFixed(1)}`;
+  $("#mapZoom").textContent = `zoom ${state.zoom.toFixed(2)}`;
 }
 
 function updateClock() {
@@ -894,7 +1362,7 @@ function updateClock() {
 function setEvidence(value) {
   state.evidence = value;
   $("#activeLayerName").textContent = layerLabels[value] || value;
-  $("#liveWindow").textContent = state.range === "all" ? "全部时间" : state.range === "7d" ? "最近 7 天" : "最近 30 天";
+  $("#liveWindow").textContent = rangeLabel();
   document.querySelectorAll("[data-evidence]").forEach((item) => item.classList.toggle("active", item.dataset.evidence === value));
   renderAll();
 }
@@ -908,17 +1376,35 @@ function renderAll() {
   renderCases();
   renderSources();
   renderTimeline();
+  renderLayerDetail();
   updateSelectedJurisdiction();
 }
 
 function attachEvents() {
+  [$("#globalSearch"), $("#mapSearch")].filter(Boolean).forEach((input) => {
+    input.addEventListener("input", (event) => {
+      state.query = event.target.value || "";
+      [$("#globalSearch"), $("#mapSearch")].filter(Boolean).forEach((otherInput) => {
+        if (otherInput !== event.target) otherInput.value = state.query;
+      });
+      renderAll();
+    });
+  });
+
+  $(".wm-floating-search")?.addEventListener("click", () => {
+    document.body.classList.toggle("wm-search-open");
+    if (document.body.classList.contains("wm-search-open")) {
+      $("#mapSearch")?.focus();
+    }
+  });
+
   $(".filters")?.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-filter]");
     if (!button) return;
     state.filter = button.dataset.filter;
     document.querySelectorAll(".filters button").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
-    renderIntel();
+    renderAll();
   });
 
   document.querySelectorAll("[data-evidence]").forEach((button) => {
@@ -930,13 +1416,60 @@ function attachEvents() {
       state.range = button.dataset.range;
       document.querySelectorAll("[data-range]").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
-      $("#liveWindow").textContent = state.range === "all" ? "全部时间" : state.range === "7d" ? "最近 7 天" : "最近 30 天";
+      $("#liveWindow").textContent = rangeLabel();
       renderAll();
     });
   });
 
+  document.querySelectorAll("[data-region]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.region = button.dataset.region;
+      state.zoom = regionViewports[state.region]?.zoom || 1;
+      state.selectedJurisdiction = null;
+      document.querySelectorAll("[data-region]").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      renderAll();
+    });
+  });
+
+  document.querySelectorAll("[data-zoom-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.zoomAction;
+      if (action === "in") state.zoom = Math.min(3.2, state.zoom + 0.25);
+      if (action === "out") state.zoom = Math.max(0.8, state.zoom - 0.25);
+      if (action === "reset") state.zoom = regionViewports[state.region]?.zoom || 1;
+      renderMap();
+    });
+  });
+
+  document.querySelectorAll("[data-map-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.mapAction;
+      if (action === "toggle") {
+        state.mapVisible = !state.mapVisible;
+        document.body.classList.toggle("wm-map-hidden", !state.mapVisible);
+        button.textContent = state.mapVisible ? "▼ 隐藏地图" : "▲ 显示地图";
+        button.classList.toggle("active", !state.mapVisible);
+      }
+      if (action === "reset") {
+        state.region = "global";
+        state.zoom = regionViewports.global.zoom;
+        state.selectedJurisdiction = null;
+        state.mapVisible = true;
+        document.body.classList.remove("wm-map-hidden");
+        document.querySelectorAll("[data-region]").forEach((item) => item.classList.toggle("active", item.dataset.region === "global"));
+        document.querySelector('[data-map-action="toggle"]').textContent = "▼ 隐藏地图";
+        document.querySelector('[data-map-action="toggle"]').classList.remove("active");
+        renderAll();
+      }
+    });
+  });
+
   $("#resetJurisdiction")?.addEventListener("click", () => {
+    state.region = "global";
+    state.zoom = regionViewports.global.zoom;
     state.selectedJurisdiction = null;
+    document.querySelectorAll("[data-region]").forEach((item) => item.classList.toggle("active", item.dataset.region === "global"));
     renderAll();
   });
 
@@ -948,6 +1481,7 @@ function attachEvents() {
     button.textContent = "监控中";
     try {
       await api("/api/monitor/run", { method: "POST" });
+      await api("/api/official-documents/run", { method: "POST" }).catch(() => null);
       await load();
     } finally {
       button.disabled = false;
@@ -958,7 +1492,7 @@ function attachEvents() {
 
 async function load() {
   $("#refreshStatus").textContent = "正在同步";
-  const [cases, organizations, documents, intel, sources, video, market, calendar, aiAnalysis] = await Promise.all([
+  const [cases, organizations, documents, intel, sources, video, market, calendar, aiAnalysis, monitorRuns, worldGeo] = await Promise.all([
     api("/api/cases"),
     api("/api/organizations"),
     api("/api/documents"),
@@ -968,6 +1502,8 @@ async function load() {
     api("/api/market-indicators").catch(() => []),
     api("/api/calendar-events").catch(() => []),
     api("/api/ai-analysis").catch(() => []),
+    api("/api/monitor/runs").catch(() => []),
+    loadWorldGeo().catch(() => null),
   ]);
   state.cases = cases;
   state.organizations = organizations;
@@ -978,6 +1514,8 @@ async function load() {
   state.market = market;
   state.calendar = calendar;
   state.aiAnalysis = aiAnalysis;
+  state.monitorRuns = monitorRuns;
+  if (worldGeo) state.worldGeo = worldGeo;
   state.lastUpdated = new Date().toISOString();
   state.nextRefreshAt = Date.now() + state.refreshMs;
   $("#refreshStatus").textContent = `同步完成 ${formatTime(state.lastUpdated)}`;

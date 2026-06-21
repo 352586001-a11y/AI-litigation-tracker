@@ -3,29 +3,41 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>欧洲 AI 版权态势监控</title>
-    <link rel="stylesheet" href="/styles.css?v=20260620-worldmonitor7" />
+    <title>全球 AI 版权态势监控</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23050505'/%3E%3Cpath d='M7 21h18M7 16h18M7 11h18' stroke='%2358ff74' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css?v=20260621-detailpanel" />
   </head>
   <body class="monitor-world">
     <div class="wm-shell">
+      <div class="wm-pro-banner">
+        <span>PRO</span>
+        <strong>版权监控 Pro 已上线</strong>
+        <em>更多信号、更少噪音。专属于全球 AI 版权诉讼与立法态势。</em>
+        <a href="/admin.html">进入后台 →</a>
+        <button type="button" aria-label="关闭">×</button>
+      </div>
       <header class="wm-topbar">
         <div class="wm-brand">
+          <span class="wm-menu-icon">☰</span>
           <span class="wm-live-dot"></span>
           <div>
-            <p>AI COPYRIGHT EUROPE</p>
-            <h1>欧洲版权诉讼与立法态势监控</h1>
+            <p>AI COPYRIGHT GLOBAL</p>
+            <h1>Copyright Monitor</h1>
           </div>
         </div>
         <div class="wm-status-strip">
           <span id="systemClock">--:-- UTC</span>
-          <span id="activeJurisdiction">全欧洲视图</span>
+          <span id="activeJurisdiction">全球视图</span>
           <span id="activeLayerName">诉讼层</span>
           <span id="refreshStatus">同步中</span>
           <span id="sourceCoverage">源 0/0</span>
-          <span>EUROPE</span>
+          <span id="activeRegion">全球</span>
         </div>
         <nav class="wm-actions">
-          <button class="wm-icon-button" type="button" aria-label="搜索">⌕</button>
+          <label class="wm-search-box" aria-label="全局搜索">
+            <span>⌕</span>
+            <input id="globalSearch" type="search" placeholder="搜索案件、机构、来源" />
+          </label>
           <button class="wm-icon-button" type="button" aria-label="视图">◎</button>
           <a href="/admin.html">后台审核</a>
           <button id="runMonitor">立即同步</button>
@@ -33,11 +45,8 @@
       </header>
 
       <nav class="wm-command-rail" aria-label="全局模块">
-        <button type="button" class="active" title="全球态势">◎</button>
-        <button type="button" title="诉讼地图">◇</button>
-        <button type="button" title="情报流">≡</button>
-        <button type="button" title="日历">□</button>
-        <button type="button" title="源状态">⌁</button>
+        <button type="button" class="active" title="全球态势">Main</button>
+        <button type="button" title="新增视图">+</button>
       </nav>
 
       <aside class="wm-left-dock">
@@ -141,17 +150,34 @@
           <div class="wm-map-toolbar">
             <div>
               <p>OSINT COPYRIGHT MAP</p>
-              <h2>欧洲版权风险地图</h2>
+              <h2>全球版权风险地图</h2>
             </div>
             <div class="wm-map-controls">
-              <button id="resetJurisdiction">全欧洲</button>
-              <span>lat 50.1</span>
-              <span>lon 10.2</span>
-              <span>zoom 4.2</span>
+              <button id="resetJurisdiction">全局</button>
+              <button data-region="global" class="active">全球</button>
+              <button data-region="europe">欧洲</button>
+              <button data-region="americas">美洲</button>
+              <button data-region="apac">亚太</button>
+              <span id="mapLat">lat 20.0</span>
+              <span id="mapLon">lon 0.0</span>
+              <span id="mapZoom">zoom 1.00</span>
             </div>
           </div>
 
-          <div class="wm-map" id="nordicMap" aria-label="欧洲 AI 版权诉讼、立法与权利人动态地图"></div>
+          <div class="wm-map" id="nordicMap" aria-label="全球 AI 版权诉讼、立法与权利人动态地图"></div>
+          <div class="wm-floating-time-tabs" aria-label="时间窗口">
+            <button type="button" data-range="1h">1h</button>
+            <button type="button" data-range="6h">6h</button>
+            <button type="button" data-range="24h">24h</button>
+            <button type="button" data-range="48h">48h</button>
+            <button type="button" data-range="7d">7d</button>
+            <button type="button" data-range="all" class="active">全部</button>
+          </div>
+          <div class="wm-map-view-controls" aria-label="地图显示">
+            <button type="button" data-map-action="toggle">▼ 隐藏地图</button>
+            <button type="button" class="active" data-map-action="mode">2D</button>
+            <button type="button" data-map-action="reset">⛶</button>
+          </div>
           <div class="wm-map-modebar" aria-label="地图图层">
             <button type="button" data-evidence="litigation" class="active">诉讼</button>
             <button type="button" data-evidence="rights">权利人</button>
@@ -161,10 +187,16 @@
             <button type="button" data-evidence="calendar">日历</button>
             <button type="button" data-evidence="official">官方源</button>
           </div>
+          <div class="wm-region-tabs" aria-label="区域视图">
+            <button type="button" data-region="global" class="active">全球</button>
+            <button type="button" data-region="europe">欧洲</button>
+            <button type="button" data-region="americas">美洲</button>
+            <button type="button" data-region="apac">亚太</button>
+          </div>
           <div class="wm-zoom-stack" aria-label="地图缩放">
-            <button type="button">+</button>
-            <button type="button">−</button>
-            <button type="button">⌖</button>
+            <button type="button" data-zoom-action="in">+</button>
+            <button type="button" data-zoom-action="out">−</button>
+            <button type="button" data-zoom-action="reset">⌖</button>
           </div>
           <div class="wm-threat-legend" aria-label="风险等级图例">
             <span><i class="p0"></i>P0</span>
@@ -172,6 +204,13 @@
             <span><i class="p2"></i>P2</span>
             <span><i class="p3"></i>P3</span>
           </div>
+          <aside class="wm-layer-detail" id="layerDetail" aria-label="当前图层详情">
+            <div class="wm-layer-detail-head">
+              <span id="layerDetailKicker">LAYER DETAIL</span>
+              <strong id="layerDetailTitle">诉讼详情</strong>
+            </div>
+            <div class="wm-layer-detail-list" id="layerDetailList"></div>
+          </aside>
           <div class="wm-live-console">
             <div>
               <span>LIVE FEED</span>
@@ -185,7 +224,26 @@
               <span>RECENT</span>
               <strong id="recentSignalCount">0 条 / 30 天</strong>
             </div>
+            <div>
+              <span>LAST RUN</span>
+              <strong id="lastMonitorRun">等待运行</strong>
+            </div>
           </div>
+          <div class="wm-footer-brand">
+            <strong>COPYRIGHT MONITOR</strong>
+            <span>v2.0.0 · AI 版权诉讼与立法态势</span>
+            <nav>
+              <a href="/admin.html">Admin</a>
+              <a href="/api/source-health">Sources</a>
+              <a href="/api/monitor/runs">Status</a>
+              <a href="/api/documents">Documents</a>
+            </nav>
+          </div>
+          <button class="wm-floating-search" type="button" aria-label="搜索">⌕</button>
+          <label class="wm-search-popover" aria-label="地图搜索">
+            <span>⌕</span>
+            <input id="mapSearch" type="search" placeholder="搜索案件、机构、来源" />
+          </label>
         </section>
 
         <section class="wm-case-dock">
@@ -237,6 +295,6 @@
       <div id="caseDetail"></div>
     </dialog>
 
-    <script src="/app.js?v=20260620-worldmonitor7"></script>
+    <script src="/app.js?v=20260621-detailpanel"></script>
   </body>
 </html>
